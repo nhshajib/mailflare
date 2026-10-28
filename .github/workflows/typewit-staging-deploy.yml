@@ -1,6 +1,9 @@
 name: Deploy TypeWit staging (manual only)
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/typewit-independent-enhancements]
+    paths: ['.github/workflows/typewit-staging-deploy.yml']
 permissions:
   contents: read
 concurrency:
