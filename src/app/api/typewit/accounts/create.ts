@@ -75,12 +75,14 @@ export async function createTypewitAccount(
     await db.batch([
       db.insert(users).values({
         id: userId, email, passwordHash, name: input.name ?? username,
-        role: "user", createdByUserId: primaryAdminUserId,
+        role: "user", createdByUserId: primaryAdminUserId, disabled: true,
       }),
       db.insert(mailboxes).values(mailbox),
     ]);
     inserted = true;
     await ensureMailboxDomainRouting(env, db, mailbox, changes);
+    // Activate only after all mailbox routing operations have succeeded.
+    await db.update(users).set({ disabled: false }).where(eq(users.id, userId));
     return NextResponse.json({
       account: { id: userId, email, name: input.name ?? username, role: "user" },
       mailbox: { id: mailboxId, address: email },
