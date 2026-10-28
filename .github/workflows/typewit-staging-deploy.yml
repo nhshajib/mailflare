@@ -35,6 +35,18 @@ jobs:
             echo "::error::Missing CF_TYPEWIT_STAGING_API_TOKEN environment secret."
             exit 1
           fi
+      - name: Verify staging account target and prohibit provider secrets
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CF_TYPEWIT_STAGING_ACCOUNT_ID }}
+        run: |
+          if [ "$CLOUDFLARE_ACCOUNT_ID" != "a23bb81df9913653447e932debbe887c" ]; then
+            echo "::error::Cloudflare account ID does not match the verified staging resource owner"
+            exit 1
+          fi
+          if [ -n "${CF_TOKEN:-}" ] || [ -n "${CF_API_KEY:-}" ] || [ -n "${RESEND_API_KEY:-}" ]; then
+            echo "::error::Runtime production/provider email credentials must not be in staging job environment"
+            exit 1
+          fi
       - name: Apply migrations to staging D1 only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_TYPEWIT_STAGING_API_TOKEN }}
