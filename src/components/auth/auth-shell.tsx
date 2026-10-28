@@ -51,6 +51,7 @@ export function AuthShell({
           )}
         </section>
 
+        <p className="mt-6 text-center text-xs text-neutral-500"><a className="underline focus-visible:outline-2 focus-visible:outline-blue-700" href="https://github.com/nhshajib/mailflare">Source code (AGPLv3)</a></p>
         <div className="mt-7 flex justify-center">
           <LanguageSelector variant="text" />
         </div>

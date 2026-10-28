@@ -10,12 +10,6 @@ const nextConfig: NextConfig = {
 		} : {},
 	},
   allowedDevOrigins: ['mail.dev'],
-	typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete
-    // even if your project has type errors.
-    ignoreBuildErrors: true,
-	  },
 	// Native and server-only packages used by the self-hosted runtime; never bundle them.
 	serverExternalPackages: ["better-sqlite3", "nodemailer", "smtp-server", "ws"],
 	async headers() {

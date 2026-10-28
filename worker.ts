@@ -1,3 +1,4 @@
+import { forwardTypewitMail } from "./src/lib/typewit/forwarding";
 import { withDatabase } from "./src/db/with-database";
 import { withStorage } from "./src/lib/storage";
 import vinextHandler from "vinext/server/fetch-handler";
@@ -84,7 +85,8 @@ export default {
 				if (forwarded && !decision.keepCopy) return;
 			}
 
-			if (message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
+			const typewitForwarded = decision?.action !== "forward" && await forwardTypewitMail(env, message);
+			if (!typewitForwarded && message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
 				const forwardingDestination = await getAccountForwardingDestination(env, message.to);
 				if (forwardingDestination) {
 					await forwardMessage(message, forwardingDestination);

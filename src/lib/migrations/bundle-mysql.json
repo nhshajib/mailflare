@@ -241,6 +241,15 @@
         "CREATE TRIGGER mailbox_aliases_jmap_au AFTER UPDATE ON mailbox_aliases FOR EACH ROW\nBEGIN\n\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (NEW.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\n\tIF NOT (OLD.mailbox_id <=> NEW.mailbox_id) THEN\n\t\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (OLD.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\n\tEND IF;\nEND;",
         "CREATE TRIGGER mailbox_aliases_jmap_ad AFTER DELETE ON mailbox_aliases FOR EACH ROW\nBEGIN\n\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (OLD.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\nEND;"
       ]
+    },
+    {
+      "name": "0002_dry_magma.sql",
+      "statements": [
+        "CREATE TABLE `typewit_accounts` (\n\t`user_id` varchar(191) NOT NULL,\n\t`state` varchar(64) NOT NULL DEFAULT 'provisioning',\n\tCONSTRAINT `typewit_accounts_user_id` PRIMARY KEY(`user_id`)\n);",
+        "CREATE TABLE `typewit_forwarding` (\n\t`mailbox_id` varchar(191) NOT NULL,\n\t`destination` longtext NOT NULL,\n\t`enabled` boolean NOT NULL DEFAULT false,\n\t`verified_at` bigint NOT NULL,\n\t`updated_at` bigint NOT NULL,\n\tCONSTRAINT `typewit_forwarding_mailbox_id` PRIMARY KEY(`mailbox_id`)\n);",
+        "ALTER TABLE `typewit_accounts` ADD CONSTRAINT `typewit_accounts_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+        "ALTER TABLE `typewit_forwarding` ADD CONSTRAINT `typewit_forwarding_mailbox_id_mailboxes_id_fk` FOREIGN KEY (`mailbox_id`) REFERENCES `mailboxes`(`id`) ON DELETE cascade ON UPDATE no action;"
+      ]
     }
   ]
 }

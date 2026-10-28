@@ -1,20 +1,21 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/lib/database-errors";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { domains, mailboxAliases, mailboxes, users } from "@/db/schema";
+import { domains, mailboxAliases, mailboxes, users, typewitAccounts } from "@/db/schema";
 import { hashPassword } from "@/lib/auth/password";
 import { rollbackEmailRoutingRuleChanges } from "@/lib/cloudflare-api";
 import type { CfEmailRoutingRuleChange } from "@/lib/cloudflare-api.types";
 import { normalizeRecipientLocalPart } from "@/lib/email/recipient-address";
+import { createAuditLog } from "@/lib/mailboxes/audit";
 import { newId } from "@/lib/ids";
 import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 
 export const typewitCreateAccountSchema = z.object({
   domainId: z.string().min(1),
   username: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-  password: z.string().min(12).max(128),
+  password: z.string().min(12).max(128).refine((value) => new TextEncoder().encode(value).length <= 72, "Password must be at most 72 UTF-8 bytes"),
   name: z.string().trim().min(1).max(100).optional(),
 }).strict();
 
@@ -40,9 +41,13 @@ export async function createTypewitAccount(
     return NextResponse.json({ error: "An active domain owned by the primary administrator is required" }, { status: 400 });
   }
 
-  const email = `${username}@${domain.hostname}`;
+  if (env.TYPEWIT_STAGING === "true" && domain.receivingProvider === "cloudflare") {
+    return NextResponse.json({ error: "Live routing is disabled in staging; use an isolated non-Cloudflare test domain" }, { status: 503 });
+  }
+
+  const email = `${username}@${domain.hostname.toLowerCase()}`;
   const [existingUser] = await db.select({ id: users.id }).from(users)
-    .where(eq(users.email, email)).limit(1);
+    .where(sql`lower(${users.email}) = ${email}`).limit(1);
   if (existingUser) {
     return NextResponse.json({ error: "Address already registered" }, { status: 409 });
   }
@@ -78,11 +83,18 @@ export async function createTypewitAccount(
         role: "user", createdByUserId: primaryAdminUserId, disabled: true,
       }),
       db.insert(mailboxes).values(mailbox),
+      db.insert(typewitAccounts).values({ userId, state: "provisioning" }),
     ]);
     inserted = true;
     await ensureMailboxDomainRouting(env, db, mailbox, changes);
     // Activate only after all mailbox routing operations have succeeded.
-    await db.update(users).set({ disabled: false }).where(eq(users.id, userId));
+    await db.batch([
+      db.update(typewitAccounts).set({ state: "ready" }).where(eq(typewitAccounts.userId, userId)),
+      db.update(users).set({ disabled: false }).where(eq(users.id, userId)),
+    ]);
+    await createAuditLog(env, { actorUserId: primaryAdminUserId, targetUserId: userId, mailboxId, action: "typewit.account.created" }).catch(() => {
+      console.warn(JSON.stringify({ event: "typewit.account.audit_unavailable", userId }));
+    });
     return NextResponse.json({
       account: { id: userId, email, name: input.name ?? username, role: "user" },
       mailbox: { id: mailboxId, address: email },
@@ -105,7 +117,10 @@ export async function createTypewitAccount(
       await db.delete(users).where(eq(users.id, userId));
       return NextResponse.json({ error: "Account setup failed; changes were rolled back" }, { status: 502 });
     } catch {
+      await db.update(typewitAccounts).set({ state: "cleanup_required" }).where(eq(typewitAccounts.userId, userId)).catch(() => undefined);
+      console.error(JSON.stringify({ event: "typewit.account.cleanup_required", userId, mailboxId }));
       return NextResponse.json({
+        accountId: userId,
         error: "Account setup failed and cleanup needs administrator review; do not retry until routing and account records are checked",
       }, { status: 502 });
     }

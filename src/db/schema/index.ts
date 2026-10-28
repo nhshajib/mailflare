@@ -109,6 +109,20 @@ export const mailboxes = sqliteTable(
 	(t) => [uniqueIndex("mailboxes_address_idx").on(t.domainId, t.localPart), index("mailboxes_user_idx").on(t.userId)],
 );
 
+// Independently owned TypeWit state; does not alter upstream license settings.
+export const typewitAccounts = sqliteTable("typewit_accounts", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  state: text("state", { enum: ["provisioning", "ready", "cleanup_required"] }).notNull().default("provisioning"),
+});
+
+export const typewitForwarding = sqliteTable("typewit_forwarding", {
+  mailboxId: text("mailbox_id").primaryKey().references(() => mailboxes.id, { onDelete: "cascade" }),
+  destination: text("destination").notNull(),
+  enabled: bool("enabled").notNull().default(false),
+  verifiedAt: timestamp("verified_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
+});
+
 export const mailboxAliases = sqliteTable(
 	"mailbox_aliases",
 	{
@@ -1118,6 +1132,8 @@ export const importJobs = sqliteTable("import_jobs", {
 }, (t) => [index("import_jobs_user_idx").on(t.userId, t.createdAt), index("import_jobs_status_idx").on(t.status, t.updatedAt)]);
 
 export const schema = {
+	typewitAccounts,
+	typewitForwarding,
 	users,
 	domains,
 	mailboxes,

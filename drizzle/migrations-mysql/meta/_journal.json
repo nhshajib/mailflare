@@ -15,6 +15,13 @@
       "when": 1792869793885,
       "tag": "0001_triggers_and_seeds",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1793195188256,
+      "tag": "0002_dry_magma",
+      "breakpoints": true
     }
   ]
 }

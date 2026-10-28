@@ -262,6 +262,15 @@
         "CREATE TRIGGER mailbox_aliases_jmap_changed AFTER INSERT OR UPDATE OR DELETE ON mailbox_aliases\nFOR EACH ROW EXECUTE FUNCTION mailflare_aliases_changed();",
         "DO $$\nBEGIN\n\tCREATE EXTENSION IF NOT EXISTS pg_trgm;\n\tCREATE INDEX messages_subject_trgm_idx ON messages USING gin (lower(subject) gin_trgm_ops);\n\tCREATE INDEX messages_text_body_trgm_idx ON messages USING gin (lower(text_body) gin_trgm_ops);\nEXCEPTION WHEN OTHERS THEN\n\tRAISE NOTICE 'pg_trgm is unavailable; message search will scan with ILIKE instead (%).', SQLERRM;\nEND;\n$$;"
       ]
+    },
+    {
+      "name": "0002_plain_talon.sql",
+      "statements": [
+        "CREATE TABLE \"typewit_accounts\" (\n\t\"user_id\" text PRIMARY KEY NOT NULL,\n\t\"state\" text DEFAULT 'provisioning' NOT NULL\n);",
+        "CREATE TABLE \"typewit_forwarding\" (\n\t\"mailbox_id\" text PRIMARY KEY NOT NULL,\n\t\"destination\" text NOT NULL,\n\t\"enabled\" boolean DEFAULT false NOT NULL,\n\t\"verified_at\" bigint NOT NULL,\n\t\"updated_at\" bigint NOT NULL\n);",
+        "ALTER TABLE \"typewit_accounts\" ADD CONSTRAINT \"typewit_accounts_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+        "ALTER TABLE \"typewit_forwarding\" ADD CONSTRAINT \"typewit_forwarding_mailbox_id_mailboxes_id_fk\" FOREIGN KEY (\"mailbox_id\") REFERENCES \"public\".\"mailboxes\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+      ]
     }
   ]
 }
