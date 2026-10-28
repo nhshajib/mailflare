@@ -1,7 +1,7 @@
 // Local-only Worker/D1 integration check. Start the isolated staging dev server on 3001 first.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID, randomBytes } from "node:crypto";
@@ -54,6 +54,64 @@ try {
     }
     assert.equal((await api("/api/typewit/accounts", { token: own.token })).status, 403);
     assert.equal((await api("/api/typewit/forwarding", { token: own.token })).status, 403);
+  }
+  if (process.argv.includes("--browser")) {
+    const { chromium } = await import("playwright");
+    const browser = await chromium.launch({ executablePath: process.env.TYPEWIT_BROWSER_EXECUTABLE || (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : "/usr/bin/google-chrome"), headless: true, args: ["--no-sandbox"] });
+    try {
+      for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+        const context = await browser.newContext({ viewport, baseURL: origin });
+        const page = await context.newPage();
+        page.setDefaultTimeout(30_000);
+        page.setDefaultNavigationTimeout(60_000);
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto("/login");
+        await page.waitForFunction(() => { const form = document.querySelector("form"); return form && Object.keys(form).some(key => key.startsWith("__reactProps")); });
+        await page.locator('input[type="email"]').fill(`admin@${host}`);
+        await page.locator('input[type="password"]').fill(password);
+        await page.getByRole("button", { name: "Sign in", exact: true }).click();
+        await page.waitForURL(url => !url.pathname.startsWith("/login"), { timeout: 30_000 });
+        await page.goto("/typewit-accounts");
+        await page.getByRole("heading", { name: "TypeWit accounts", exact: true }).waitFor();
+        await page.getByText(`alice@${host}`, { exact: true }).waitFor();
+        assert.equal(await page.locator('input[type="password"]').getAttribute("autocomplete"), "new-password");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, "Account page must fit the viewport");
+        await page.waitForFunction(() => {
+          const heading = [...document.querySelectorAll("h1")].find(node => node.textContent === "TypeWit accounts");
+          if (!heading) return false;
+          for (let node = heading; node; node = node.parentElement) {
+            const style = getComputedStyle(node);
+            if (Number(style.opacity) < 0.99 || style.visibility === "hidden") return false;
+          }
+          return true;
+        });
+        await page.getByRole("button", { name: `Disable bob@${host}`, exact: true }).click({ trial: true });
+        await page.getByRole("button", { name: `Disable bob@${host}`, exact: true }).focus();
+        assert.equal(await page.evaluate(() => document.activeElement?.tagName), "BUTTON");
+        assert.deepEqual(errors, [], "Account UI must not throw client exceptions");
+        const unlabeled = await page.locator('input:not([type="hidden"]), select, textarea').evaluateAll(controls => controls.filter(control => !control.labels?.length && !control.getAttribute("aria-label") && !control.getAttribute("aria-labelledby")).map(control => control.tagName));
+        assert.deepEqual(unlabeled, [], "Account forms must label every input");
+        await page.keyboard.press("Tab");
+        assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");
+        if (process.env.TYPEWIT_SCREENSHOT_DIR) {
+          await page.evaluate(() => { for (const element of document.querySelectorAll("*")) if (element.scrollTop > 0) element.scrollTop = 0; });
+          await page.screenshot({ path: `${process.env.TYPEWIT_SCREENSHOT_DIR}/typewit-accounts-${viewport.width}.png`, fullPage: true });
+        }
+        await page.goto("/mailboxes");
+        await page.getByRole("button", { name: "New mailbox", exact: true }).click();
+        await page.waitForFunction(() => document.getElementById("mailbox-name")?.value === "Local smoke admin");
+        await page.locator("#mailbox-name").fill("");
+        assert.equal(await page.locator("#mailbox-name").inputValue(), "", "Clearing a default name must preserve the edit");
+        await page.locator("#mailbox-name").fill("Local test mailbox");
+        await page.locator("#mailbox-username").fill("browsercheck");
+        await page.getByRole("combobox", { name: "Domain", exact: true }).selectOption(domainId);
+        assert.equal(await page.getByRole("button", { name: "Create mailbox", exact: true }).isEnabled(), true, "Displayed defaults and submitted owner must agree");
+        assert.deepEqual(errors, [], "Mailbox settings must not throw client exceptions");
+        await context.close();
+      }
+      console.log("PASS: real Chromium desktop/mobile login and account directory, keyboard focus, labels, no horizontal overflow or client exceptions.");
+    } finally { await browser.close(); }
   }
   const disabled = await api("/api/typewit/accounts", { method: "PATCH", token: admin, body: { id: accounts[0].account.id, disabled: true } });
   assert.equal(disabled.status, 200);

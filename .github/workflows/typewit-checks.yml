@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [types, lint, tests, audit, production-build, staging-build, local-worker]
+        check: [types, lint, tests, audit, production-build, staging-build, local-worker, postgres]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -64,6 +64,11 @@ jobs:
             sleep 1
           done
           if [ "$ready" != true ]; then cat /tmp/typewit-worker.log; exit 1; fi
-          node scripts/typewit-local-smoke.mjs
+          node scripts/typewit-local-smoke.mjs --browser
+      - name: PostgreSQL migrations, claims, query shapes and backup restoration
+        if: matrix.check == 'postgres'
+        env:
+          MAILFLARE_DB_DIALECT: postgres
+        run: npm run db:smoke -- pglite://memory
       - name: Confirm generated tracked bundles are current
-        run: git diff --exit-code -- src/lib/migrations/bundle-postgres.json src/lib/migrations/bundle-mysql.json
+        run: git diff --exit-code -- src/lib/migrations/bundle.json src/lib/migrations/bundle-postgres.json src/lib/migrations/bundle-mysql.json
