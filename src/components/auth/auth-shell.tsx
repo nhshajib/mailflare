@@ -2,6 +2,7 @@
 
 import { LanguageSelector } from "@/components/language-selector";
 import type { AuthShellProps } from "./types";
+import { TYPEWIT_IDENTITY } from "@/lib/typewit/identity";
 
 export function AuthShell({
   title,
@@ -15,8 +16,8 @@ export function AuthShell({
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-white px-6 py-8 sm:min-h-0 sm:rounded-3xl sm:px-10 sm:py-10 sm:shadow-xl">
         <header className="flex flex-col items-center text-center">
           <img
-            src="/typewit-logo.png"
-            alt="TypeWit"
+            src={TYPEWIT_IDENTITY.logoPath}
+            alt={TYPEWIT_IDENTITY.shortName}
             className="h-auto w-auto max-w-[180px] object-contain sm:max-w-[195px]"
           />
           <h1 className="mt-6 text-3xl font-medium tracking-tight text-neutral-950 sm:text-4xl">
