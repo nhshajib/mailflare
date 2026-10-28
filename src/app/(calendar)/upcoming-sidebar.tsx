@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -21,11 +22,12 @@ export function UpcomingSidebar({ events, onSelect, drawer = false, refreshKey }
 	const [loadedEvents, setLoadedEvents] = useState<CalendarEvent[]>([]);
 	const [loadError, setLoadError] = useState(false);
 	const [loaded, setLoaded] = useState(false);
-	const [visibleCount, setVisibleCount] = useState(UPCOMING_BATCH_SIZE);
+
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
-	const today = useMemo(() => startOfDay(new Date()), []);
+	const [today] = useState(() => startOfDay(new Date()));
 	const shownEvents = events ?? loadedEvents;
+	const [visibleCount, setVisibleCount] = useResettableState(JSON.stringify(shownEvents.map(event => [event.id, event.startsAt])), UPCOMING_BATCH_SIZE);
 	const groups = useMemo(() => groupUpcomingEvents(shownEvents, today, t), [shownEvents, today, t]);
 	const total = useMemo(() => groups.reduce((count, group) => count + group.events.length, 0), [groups]);
 	const visibleGroups = useMemo(() => takeUpcomingGroups(groups, visibleCount), [groups, visibleCount]);
@@ -44,7 +46,6 @@ export function UpcomingSidebar({ events, onSelect, drawer = false, refreshKey }
 		return () => { active = false; };
 	}, [events, today, refreshKey]);
 
-	useEffect(() => { setVisibleCount(UPCOMING_BATCH_SIZE); }, [shownEvents]);
 
 	useEffect(() => {
 		if (minimal || visibleCount >= total || !scrollRef.current || !sentinelRef.current) return;

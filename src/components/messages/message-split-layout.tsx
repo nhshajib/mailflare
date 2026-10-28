@@ -1,5 +1,9 @@
 "use client";
 
+import { useMailSearch } from "@/components/mail-search/mail-search-context";
+import { useSelectedMailbox } from "@/components/mailbox-provider";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
@@ -20,17 +24,20 @@ export function MessageSplitLayout({
 	config,
 }: MessageSplitLayoutProps) {
 	const pathname = usePathname();
-	const [selectedMessages, setSelectedMessages] = useState<SelectedMessage[]>([]);
-	const [listWidth, setListWidth] = useState(360);
-	const [widthReady, setWidthReady] = useState(false);
+	const hydrated = useHydrated();
+	const { userId, setForcedMinimal } = useSidebar();
+	const { query } = useMailSearch();
+  const { selectedMailbox } = useSelectedMailbox();
+  const [selectedMessages, setSelectedMessages] = useResettableState<SelectedMessage[]>(JSON.stringify([query, selectedMailbox?.id, config.folder, config.folderId]), []);
+	const [listWidth, setListWidth] = useResettableState(`${hydrated}:${userId}`, hydrated ? (userId ? readColumnWidth(userId, "message-list", readInitialColumnWidth("message-list", 360, 250, 1200), 250, 1200) : readInitialColumnWidth("message-list", 360, 250, 1200)) : 360);
+	const widthReady = hydrated;
 	const [containerWidth, setContainerWidth] = useState(0);
-	const [manualListVisible, setManualListVisible] = useState(true);
+	const [manualListVisible, setManualListVisible] = useResettableState(hydrated, hydrated ? readInitialMessageListVisible() : true);
 	const [twoColumnReading] = useTwoColumnReading();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const startWidth = useRef(listWidth);
 	const resizedWidth = useRef(listWidth);
 	const { t } = useLanguage();
-	const { userId, setForcedMinimal } = useSidebar();
 	const assistantOpen = useAssistantOpen();
 	const listVisible = twoColumnReading && !assistantOpen && manualListVisible;
 	const detailPrefix = `${config.hrefPrefix}/`;
@@ -40,27 +47,12 @@ export function MessageSplitLayout({
 	const renderedListWidth = Math.max(250, Math.min(listWidth, (containerWidth || 1000) - 280));
 
 	useLayoutEffect(() => {
-		setListWidth(readInitialColumnWidth("message-list", 360, 250, 1200));
-		setManualListVisible(readInitialMessageListVisible());
-		const frame = requestAnimationFrame(() => setWidthReady(true));
-		return () => cancelAnimationFrame(frame);
-	}, []);
-
-	useEffect(() => {
-		if (!userId) return;
-		const savedWidth = readColumnWidth(userId, "message-list", readInitialColumnWidth("message-list", 360, 250, 1200), 250, 1200);
-		setListWidth(savedWidth);
-		saveColumnWidth(userId, "message-list", savedWidth);
-	}, [userId]);
-
-	useLayoutEffect(() => {
 		if (!selectedMessageId) {
 			setForcedMinimal(false);
 			return;
 		}
 		const container = containerRef.current;
 		if (!container) return;
-		setContainerWidth(container.clientWidth);
 		const observer = new ResizeObserver(() => setContainerWidth(container.clientWidth));
 		observer.observe(container);
 		return () => observer.disconnect();

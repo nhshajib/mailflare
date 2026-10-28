@@ -6,6 +6,7 @@ const openedUnreadKey = "mailflare-navigation-opened-unread";
 export function rememberOpenedUnreadMessage(messageId: string) {
 	try {
 		sessionStorage.setItem(openedUnreadKey, messageId);
+		window.dispatchEvent(new Event(openedUnreadKey));
 	} catch {
 		// Navigation remains available when browser storage is disabled.
 	}
@@ -31,4 +32,12 @@ export function getMessageDetailNavigationState(entries: MessageNavigationEntry[
 		unreadOrder: index >= 0 && index < unread.length ? index + 1 : 0,
 		totalUnread: unread.length,
 	};
+}
+
+export function readOpenedUnreadMessage(): string | null {
+  try { return sessionStorage.getItem(openedUnreadKey); } catch { return null; }
+}
+export function subscribeOpenedUnreadMessage(notify: () => void) {
+  window.addEventListener(openedUnreadKey, notify);
+  return () => window.removeEventListener(openedUnreadKey, notify);
 }

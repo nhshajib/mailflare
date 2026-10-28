@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
@@ -8,8 +10,8 @@ import { readStorage, writeStorage } from "./reorderable-list-utils";
 
 /** Open/closed state of a menu section, remembered in localStorage. Starts open. */
 export function useSectionOpen(storageKey: string): [boolean, () => void] {
-	const [open, setOpen] = useState(true);
-	useEffect(() => { setOpen(readStorage(storageKey, true)); }, [storageKey]);
+	const hydrated = useHydrated();
+	const [open, setOpen] = useResettableState(`${storageKey}:${hydrated}`, hydrated ? readStorage(storageKey, true) : true);
 	function toggle() {
 		writeStorage(storageKey, !open);
 		setOpen(!open);

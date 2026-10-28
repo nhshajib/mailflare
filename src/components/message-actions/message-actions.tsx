@@ -133,7 +133,7 @@ export function MessageActions({
 		} finally {
 			setPendingAction(null);
 		}
-	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, messageMeta?.createdAt, replyable, ownAddresses, openDraftComposer, t]);
+	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, messageMeta, replyable, ownAddresses, openDraftComposer, t]);
 
 	const shortcuts = useMemo(
 		() => [

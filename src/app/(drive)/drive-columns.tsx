@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import type { KeyboardEvent, PointerEvent } from "react";
@@ -13,16 +15,19 @@ const MIN_WIDTH = 72;
 const MAX_WIDTH = 480;
 const clamp = (value: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(value)));
 
+function readWidths(): Record<DriveColumn, number> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
+    if (!saved || typeof saved !== "object") return DEFAULT_WIDTHS;
+    const safe = (name: DriveColumn) => typeof saved[name] === "number" && Number.isFinite(saved[name]) ? clamp(saved[name]) : DEFAULT_WIDTHS[name];
+    return { owner: safe("owner"), updatedAt: safe("updatedAt"), size: safe("size") };
+  } catch { return DEFAULT_WIDTHS; }
+}
+
 /** Widths of the resizable columns; the name column takes whatever is left. Remembered per browser. */
 export function useDriveColumns() {
-	const [widths, setWidths] = useState(DEFAULT_WIDTHS);
-
-	useEffect(() => {
-		try {
-			const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Partial<Record<DriveColumn, number>> | null;
-			if (saved) setWidths((current) => ({ owner: clamp(saved.owner ?? current.owner), updatedAt: clamp(saved.updatedAt ?? current.updatedAt), size: clamp(saved.size ?? current.size) }));
-		} catch { /* storage unavailable: keep defaults */ }
-	}, []);
+	const hydrated = useHydrated();
+  const [widths, setWidths] = useResettableState(hydrated, hydrated ? readWidths() : DEFAULT_WIDTHS);
 
 	const resize = useCallback((column: DriveColumn, width: number, persist = false) => {
 		setWidths((current) => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import "./style.scss"
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -27,23 +29,26 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 	const { selectedMailbox } = useSelectedMailbox();
 	const pathname = usePathname();
 	const { openDraftComposer } = useCompose();
-	const [view, setView] = useState<AgentPanelView>("chat");
-	const [settings, setSettings] = useState<AgentSettings | null>(null);
+	const mailboxId = selectedMailbox?.id;
+	const hydrated = useHydrated();
+	const panelKey = `${mailboxId}:${open}`;
+	const [view, setView] = useResettableState<AgentPanelView>(panelKey, "chat");
+	const [settings, setSettings] = useResettableState<AgentSettings | null>(panelKey, null);
 	const [availableModels, setAvailableModels] = useState<string[]>([]);
 	const [reviewers, setReviewers] = useState<{ id: string; name: string; email: string }[]>([]);
 	const [canManage, setCanManage] = useState(false);
 	const [providerConfigured, setProviderConfigured] = useState(false);
 	const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
-	const [conversationId, setConversationId] = useState<string | null>(null);
+	const [conversationId, setConversationId] = useResettableState<string | null>(panelKey, null);
 	const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
 	const [conversations, setConversations] = useState<AgentConversation[]>([]);
-	const [messages, setMessages] = useState<AgentMessage[]>([]);
-	const [loadingConversation, setLoadingConversation] = useState(false);
+	const [messages, setMessages] = useResettableState<AgentMessage[]>(panelKey, []);
+	const [loadingConversation, setLoadingConversation] = useResettableState(`${panelKey}:${hydrated}`, hydrated && !!mailboxId && !!readAgentConversationId(mailboxId));
 	const [jobs, setJobs] = useState<AgentJob[]>([]);
 	const [input, setInput] = useState("");
-	const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [queuedMessages, setQueuedMessages] = useResettableState<QueuedAgentMessage[]>(panelKey, []);
+	const [busy, setBusy] = useResettableState(panelKey, false);
+	const [error, setError] = useResettableState<string | null>(panelKey, null);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [draftReview, setDraftReview] = useState<{ approvalId: string; snapshot: ReviewSnapshot; draftId: string } | null>(null);
 	const abort = useRef<AbortController | null>(null);
@@ -55,7 +60,6 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 	const chatScrollRef = useRef<HTMLDivElement | null>(null);
 	const stickToBottomRef = useRef(true);
 	const selectedConversationRef = useRef<string | null>(null);
-	const mailboxId = selectedMailbox?.id;
 	const selectedMessageId = pathname.match(/^\/(?:inbox|sent|archived|spam|trash|starred|snoozed|folders\/[^/]+)\/([^/]+)/)?.[1] ?? null;
 	const [openEmailSubjects, setOpenEmailSubjects] = useState<Record<string, string>>({});
 	const [dismissedMessageId, setDismissedMessageId] = useState<string | null>(null);
@@ -114,21 +118,32 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 		runningRef.current = false;
 		queueGenerationRef.current += 1;
 		queuedMessagesRef.current = [];
-		setQueuedMessages([]);
-		setBusy(false);
 		if (!open || !mailboxId) return;
 		let cancelled = false;
 		stickToBottomRef.current = true;
-		setConversationId(null);
-		setMessages([]);
-		setSettings(null);
-		setView("chat");
 		if (menuRef.current) menuRef.current.open = false;
-		setError(null);
-		void refresh().catch(() => { if (!cancelled) setError(t("agent.panel.settingsLoadFailed")); });
+    void Promise.all([
+      authFetch(`/api/agent/settings?mailboxId=${encodeURIComponent(mailboxId)}`),
+      authFetch(`/api/agent/conversations?mailboxId=${encodeURIComponent(mailboxId)}`),
+      authFetch(`/api/agent/jobs?mailboxId=${encodeURIComponent(mailboxId)}`),
+    ]).then(async ([settingsResponse, conversationsResponse, jobsResponse]) => {
+      if (cancelled) return;
+      if (!settingsResponse.ok) throw new Error(t("agent.panel.settingsLoadFailed"));
+      const data = await settingsResponse.json() as AgentSettingsResponse;
+      if (cancelled) return;
+      setSettings(data.settings); setAvailableModels(data.models ?? []); setCanManage(data.canManage);
+      setProviderConfigured(data.providerConfigured); setAutoReplyEnabled(data.autoReplyEnabled); setReviewers(data.reviewers ?? []);
+      if (conversationsResponse.ok) {
+        const data = await conversationsResponse.json() as AgentConversationsResponse;
+        if (!cancelled) setConversations(data.conversations ?? []);
+      }
+      if (jobsResponse.ok) {
+        const data = await jobsResponse.json() as AgentJobsResponse;
+        if (!cancelled) setJobs(data.jobs ?? []);
+      }
+    }).catch(() => { if (!cancelled) setError(t("agent.panel.settingsLoadFailed")); });
 		const savedId = readAgentConversationId(mailboxId);
 		selectedConversationRef.current = savedId;
-		setLoadingConversation(Boolean(savedId));
 		if (savedId) void authFetch(`/api/agent/conversations/${encodeURIComponent(savedId)}?mailboxId=${encodeURIComponent(mailboxId)}`).then(async (response) => {
 			if (cancelled || selectedConversationRef.current !== savedId) return;
 			if (!response.ok) { saveAgentConversationId(mailboxId, null); selectedConversationRef.current = null; setLoadingConversation(false); return; }
@@ -235,7 +250,7 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 		}
 	}
 
-	async function send(text: string, queued?: QueuedAgentMessage) {
+	const send = useCallback(async function sendNext(text: string, queued?: QueuedAgentMessage) {
 		if (!mailboxId || !text.trim() || runningRef.current || loadingConversation) return;
 		const controller = new AbortController();
 		const generation = queueGenerationRef.current;
@@ -270,7 +285,8 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 				if (event.type === "error") { streamErrored = true; setError(event.message); }
 			});
 			if (generation === queueGenerationRef.current) {
-				setMessages((current) => current.map((item) => item.id === assistantMessageId ? { ...item, pending: false, durationMs: Date.now() - startedAt, createdAt: new Date().toISOString() } : item));
+				const finishedAt = Date.now();
+        setMessages((current) => current.map((item) => item.id === assistantMessageId ? { ...item, pending: false, durationMs: finishedAt - startedAt, createdAt: new Date(finishedAt).toISOString() } : item));
 				void refresh();
 			}
 		} catch (cause) {
@@ -281,7 +297,10 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 					if (queued) { queuedMessagesRef.current = [queued, ...queuedMessagesRef.current]; setQueuedMessages(queuedMessagesRef.current); }
 					else setInput((current) => current || text);
 				}
-			} else setMessages((current) => current.map((item) => item.id === assistantMessageId ? { ...item, pending: false, durationMs: Date.now() - startedAt, createdAt: new Date().toISOString() } : item));
+			} else {
+        const finishedAt = Date.now();
+        setMessages((current) => current.map((item) => item.id === assistantMessageId ? { ...item, pending: false, durationMs: finishedAt - startedAt, createdAt: new Date(finishedAt).toISOString() } : item));
+      }
 			if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : t("agent.panel.failed"));
 			streamErrored = !controller.signal.aborted;
 		} finally {
@@ -293,10 +312,10 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 				const [next, ...remaining] = queuedMessagesRef.current;
 				queuedMessagesRef.current = remaining;
 				setQueuedMessages(remaining);
-				void send(next.text, next);
+				void sendNext(next.text, next);
 			}
 		}
-	}
+	}, [mailboxId, loadingConversation, t, refresh, setBusy, setError, setMessages, setConversationId, setQueuedMessages]);
 
 	function submitMessage(text: string) {
 		if (!mailboxId || !text.trim() || !settings || !providerConfigured || loadingConversation) return;

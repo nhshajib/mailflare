@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import { formatUserDate } from "@/lib/time/utils";
 import { ChevronsUpDown, Paperclip } from "lucide-react";
@@ -125,7 +126,7 @@ export function ConversationMessageCard({
 }: ConversationMessageCardProps) {
 	const { t } = useLanguage();
 	const [locallyExpanded, setLocallyExpanded] = useState(defaultExpanded);
-	const [locallyRead, setLocallyRead] = useState(message.read);
+	const [locallyRead, setLocallyRead] = useResettableState(message.read, message.read);
 	const [detailsOpen, setDetailsOpen] = useState(false);
 	const expanded = locallyExpanded;
 	const sender = getConversationSender(message, currentAccountName);
@@ -138,8 +139,6 @@ export function ConversationMessageCard({
 	const { visible: messageListVisible } = useMessageListVisibility();
 	const isAssistantOpen = useAssistantOpen();
 	const isAnyPanelVisible = messageListVisible || isAssistantOpen;
-
-	useEffect(() => setLocallyRead(message.read), [message.read]);
 
 	let body: { html: string | null; text: string; quotedHtml: string | null } | null = null;
 	if (expanded) {

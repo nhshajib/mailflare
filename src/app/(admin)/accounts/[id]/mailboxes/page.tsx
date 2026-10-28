@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -21,33 +22,20 @@ import {
 export default function AccountMailboxesPage() {
   const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
-  const [account, setAccount] = useState<ManagedAccount | null>(null);
-  const [mailboxes, setMailboxes] = useState<ManagedMailbox[]>([]);
-  const [domains, setDomains] = useState<ManagedDomain[]>([]);
   const [localPart, setLocalPart] = useState("");
   const [domainId, setDomainId] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function load() {
-    const [nextAccount, nextMailboxes, nextDomains] = await Promise.all([
-      fetchManagedAccount(id),
-      fetchManagedMailboxes(id),
-      fetchManagedDomains(),
-    ]);
-    setAccount(nextAccount);
-    setMailboxes(nextMailboxes);
-    setDomains(nextDomains);
-    setDomainId((current) => current || nextDomains[0]?.id || "");
-  }
-
-  useEffect(() => {
-    void load().catch((error) =>
-      setMessage(
-        error instanceof Error ? error.message : t("account.mailboxes.loadFailed"),
-      ),
-    );
-  }, [id, t]);
+  const query = useQuery({ queryKey: ["managed-account-mailboxes", id], queryFn: async () => {
+    const [account, mailboxes, domains] = await Promise.all([fetchManagedAccount(id), fetchManagedMailboxes(id), fetchManagedDomains()]);
+    return { account, mailboxes, domains };
+  } });
+  const account = query.data?.account;
+  const mailboxes = query.data?.mailboxes ?? [];
+  const domains = query.data?.domains ?? [];
+  const selectedDomainId = domainId || domains[0]?.id || "";
+  async function load() { const result = await query.refetch(); if (result.error) throw result.error; }
 
   async function addMailbox(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +43,7 @@ export default function AccountMailboxesPage() {
     setSaving(true);
     setMessage(null);
     try {
-      await addManagedMailbox(account, { domainId, localPart });
+      await addManagedMailbox(account, { domainId: selectedDomainId, localPart });
       setLocalPart("");
       await load();
     } catch (error) {
@@ -148,7 +136,7 @@ export default function AccountMailboxesPage() {
                 <Label htmlFor="inbox-domain">{t("account.mailboxes.domain")}</Label>
                 <Select
                   id="inbox-domain"
-                  value={domainId}
+                  value={selectedDomainId}
                   onChange={(event) => setDomainId(event.target.value)}
                   containerClassName="h-10 w-full min-w-0 bg-white"
                   className="min-w-0 text-sm"

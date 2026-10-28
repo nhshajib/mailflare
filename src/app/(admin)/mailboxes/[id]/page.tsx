@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AtSign, Save, Trash2, UserPlus } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -39,11 +40,6 @@ export default function MailboxSettingsPage() {
   const params = useParams<{ id: string }>();
   const mailboxId = params.id;
   const qc = useQueryClient();
-  const [displayName, setDisplayName] = useState("");
-  const [useAllDomains, setUseAllDomains] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [aliasLocalPart, setAliasLocalPart] = useState("");
-  const [aliasDomainId, setAliasDomainId] = useState("");
 
   const mailbox = useQuery({
     queryKey: ["mailbox", mailboxId],
@@ -51,13 +47,11 @@ export default function MailboxSettingsPage() {
     enabled: !!mailboxId,
   });
 
-  useEffect(() => {
-    if (mailbox.data) {
-      setDisplayName(mailbox.data.displayName ?? "");
-      setUseAllDomains(mailbox.data.useAllDomains);
-      setAliasDomainId((current) => current || mailbox.data.domainId);
-    }
-  }, [mailbox.data]);
+  const [displayName, setDisplayName] = useResettableState(`${mailboxId}:${mailbox.data?.displayName}`, mailbox.data?.displayName ?? "");
+  const [useAllDomains, setUseAllDomains] = useResettableState(`${mailboxId}:${mailbox.data?.useAllDomains}`, mailbox.data?.useAllDomains ?? true);
+  const [aliasDomainId, setAliasDomainId] = useResettableState(`${mailboxId}:${mailbox.data?.domainId}`, mailbox.data?.domainId ?? "");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [aliasLocalPart, setAliasLocalPart] = useState("");
 
   const updateName = useMutation({
     mutationFn: () => updateMailboxSettings(mailboxId, { displayName, useAllDomains }),

@@ -1,13 +1,15 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
 import { readInitialAssistantAvailability, saveAssistantAvailability } from "@/lib/agent/availability-client";
 import type { AssistantAvailabilityResponse } from "./assistant-availability-types";
 
 export function useAssistantAvailability() {
-	const [enabled, setEnabled] = useState<boolean | null>(null);
-	useLayoutEffect(() => setEnabled(readInitialAssistantAvailability()), []);
+	const hydrated = useHydrated();
+	const [enabled, setEnabled] = useResettableState<boolean | null>(hydrated, hydrated ? readInitialAssistantAvailability() : null);
 
 	useEffect(() => {
 		let active = true;

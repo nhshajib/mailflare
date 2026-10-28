@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import Link from "next/link";
@@ -36,16 +37,13 @@ export function EmailClientsSettings() {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [copied, setCopied] = useState<string | null>(null);
-	const [qr, setQr] = useState<string | null>(null);
+	const [qr, setQr] = useResettableState<string | null>(JSON.stringify([key, username]), null);
 	const server = typeof window !== "undefined" ? window.location.origin : "";
 
 	// The mobile app scans this to fill in the sign-in form; it carries the key, so it is
 	// rendered in the browser and never leaves the page.
 	useEffect(() => {
-		if (!key) {
-			setQr(null);
-			return;
-		}
+		if (!key) return;
 		let cancelled = false;
 		QRCode.toDataURL(buildSignInQrPayload({ server, email: username, key }), { margin: 1, width: 240, errorCorrectionLevel: "M" })
 			.then((url) => { if (!cancelled) setQr(url); })

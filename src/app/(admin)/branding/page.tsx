@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ExternalLink, ImagePlus, LockKeyhole, Palette } from "lucide-react";
@@ -14,16 +15,13 @@ import { BRANDING_ICON_ACCEPT, saveBranding } from "./utils";
 export default function BrandingPage() {
 	const { t } = useLanguage();
 	const branding = useBranding();
-	const [appName, setAppName] = useState(branding.appName);
+	const [appName, setAppName] = useResettableState(branding.appName, branding.appName);
 	const [icon, setIcon] = useState<File | null>(null);
 	const [preview, setPreview] = useState<string | null>(null);
 	const [status, setStatus] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	useEffect(() => {
-		setAppName(branding.appName);
-	}, [branding.appName]);
 
 	if (!branding.canCustomizeBranding) {
 		return (

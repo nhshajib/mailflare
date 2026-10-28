@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "lucide-react";
@@ -47,11 +48,8 @@ function AccountAvatar({
 }: AccountAvatarProps) {
 	const { t } = useLanguage();
 	const sizeClass = size === "large" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
-	const [imageFailed, setImageFailed] = useState(false);
+	const [imageFailed, setImageFailed] = useResettableState(`${avatarUrl}:${hasAvatar}`, false);
 
-	useEffect(() => {
-		setImageFailed(false);
-	}, [avatarUrl, hasAvatar]);
 
 	if (hasAvatar && !imageFailed) {
 		return (

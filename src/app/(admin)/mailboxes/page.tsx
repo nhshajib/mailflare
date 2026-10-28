@@ -32,10 +32,10 @@ export default function MailboxesPage() {
 	const qc = useQueryClient();
 	const router = useRouter();
 	const base = getMailboxesBase(usePathname());
-	const [displayName, setDisplayName] = useState("");
+	const [displayNameDraft, setDisplayName] = useState<string | null>(null);
 	const [localPart, setLocalPart] = useState("");
 	const [domainId, setDomainId] = useState("");
-	const [ownerUserId, setOwnerUserId] = useState("");
+	const [ownerUserIdDraft, setOwnerUserId] = useState<string | null>(null);
 	const [mailboxType, setMailboxType] = useState<"personal" | "shared">("personal");
 	const [createOpen, setCreateOpen] = useState(false);
 
@@ -47,11 +47,8 @@ export default function MailboxesPage() {
 		},
 	});
 
-	useEffect(() => {
-		if (!createOpen) return;
-		setDisplayName((currentName) => currentName || account.data?.user?.name?.trim() || "");
-		setOwnerUserId((currentId) => currentId || account.data?.user?.id || "");
-	}, [account.data?.user?.id, account.data?.user?.name, createOpen]);
+	const displayName = displayNameDraft ?? account.data?.user?.name?.trim() ?? "";
+	const ownerUserId = ownerUserIdDraft ?? account.data?.user?.id ?? "";
 
 	const accounts = useQuery({
 		queryKey: ["accounts", "mailbox-owners"],
@@ -94,10 +91,10 @@ export default function MailboxesPage() {
 			});
 			const json = (await res.json()) as { id?: string; error?: string };
 			if (!res.ok) throw new Error(json.error ?? t("mailboxes.failed"));
-			setDisplayName("");
+			setDisplayName(null);
 			setLocalPart("");
 			setDomainId("");
-			setOwnerUserId("");
+			setOwnerUserId(null);
 			return json.id;
 		},
 		onSuccess: (mailboxId) => {

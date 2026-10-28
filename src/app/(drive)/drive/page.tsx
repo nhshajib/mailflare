@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { createPortal } from "react-dom";
@@ -56,12 +58,13 @@ export default function DrivePage() {
 	const columns = useDriveColumns();
 	const [ascending, setAscending] = useState(true);
 	const [dragging, setDragging] = useState(false);
-	const [search, setSearch] = useState(query);
-	const [headerTarget, setHeaderTarget] = useState<HTMLElement | null>(null);
+	const [search, setSearch] = useResettableState(query, query);
+	const hydrated = useHydrated();
+  const headerTarget = hydrated ? document.getElementById("drive-header-slot") : null;
 	const [preview, setPreview] = useState<DriveItemDto | null>(null);
 	const [sharing, setSharing] = useState<DriveItemDto | null>(null);
 	const [naming, setNaming] = useState<{ mode: "create" | "rename"; item?: DriveItemDto; value: string } | null>(null);
-	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
 	const selectAllRef = useRef<HTMLInputElement | null>(null);
 	const fileInput = useRef<HTMLInputElement | null>(null);
 	const dragDepth = useRef(0);
@@ -73,6 +76,8 @@ export default function DrivePage() {
 	// A listing seen before renders straight from memory while it is refetched; only a new one shows the skeleton.
 	const current = listing?.key === requestKey ? listing.data : readDriveListing(requestKey);
 	const items = useMemo(() => current?.items ?? [], [current]);
+  const [rawSelectedIds, setSelectedIds] = useResettableState<Set<string>>(requestKey, new Set());
+  const selectedIds = useMemo(() => new Set([...rawSelectedIds].filter(id => items.some(item => item.id === id))), [rawSelectedIds, items]);
 	const path = current?.path ?? [];
 	const role = current?.role ?? "owner";
 	const loading = !current;
@@ -104,17 +109,30 @@ export default function DrivePage() {
 	// Reload after a change; other cached listings may be stale now, so they are dropped.
 	const refresh = useCallback(() => { clearDriveListings(); return load(); }, [load]);
 
-	useEffect(() => { void load(); }, [load]);
-	useEffect(() => { setSearch(query); }, [query]);
+  useEffect(() => {
+    let active = true;
+    const search = new URLSearchParams({ view });
+    if (folder) search.set("parent", folder);
+    if (query) search.set("q", query);
+    if (typesParam) search.set("types", typesParam);
+    void authFetch(`/api/drive/items?${search}`).then(async response => {
+      if (!response.ok) throw new Error("Drive listing unavailable");
+      return await response.json() as DriveListing;
+    }).then(data => {
+      if (!active) return;
+      saveDriveListing(requestKey, data); setListing({ key: requestKey, data }); setFailedKey(null);
+      window.dispatchEvent(new CustomEvent(DRIVE_STORAGE_EVENT, { detail: { used: data.storageUsed, limit: data.storageLimit } }));
+      window.dispatchEvent(new Event(DRIVE_FOLDERS_EVENT));
+    }).catch(() => { if (active) setFailedKey(requestKey); });
+    return () => { active = false; };
+  }, [requestKey, view, folder, query, typesParam]);
+
 	useEffect(() => {
 		const onRefresh = () => void refresh();
 		window.addEventListener(DRIVE_REFRESH_EVENT, onRefresh);
 		return () => window.removeEventListener(DRIVE_REFRESH_EVENT, onRefresh);
 	}, [refresh]);
-	useEffect(() => { setSelectedIds(new Set()); }, [requestKey]);
 	// Keep only selected items that are still listed (after a move, trash, upload or reload).
-	useEffect(() => { setSelectedIds((current) => { const present = new Set(items.map((item) => item.id)); const next = new Set([...current].filter((id) => present.has(id))); return next.size === current.size ? current : next; }); }, [items]);
-	useEffect(() => { setHeaderTarget(document.getElementById("drive-header-slot")); }, []);
 
 	const patchUpload = useCallback((id: string, patch: Partial<DriveUploadEntry>) => setUploads((list) => list.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))), []);
 

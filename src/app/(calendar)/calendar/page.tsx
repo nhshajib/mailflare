@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
@@ -40,7 +42,7 @@ const eventFieldClass = "h-9 border-transparent bg-transparent px-2 shadow-none 
 export default function CalendarPage() {
   const { t } = useLanguage();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+
   const [eventsVersion, setEventsVersion] = useState(0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [visibleDate, setVisibleDate] = useState(() => new Date());
@@ -51,7 +53,8 @@ export default function CalendarPage() {
   const monthPickerPopupRef = useRef<HTMLDivElement | null>(null);
   const [monthPickerPos, setMonthPickerPos] = useState<{ top: number; left: number } | null>(null);
   const openedEventFromUrl = useRef<string | null>(null);
-  const [headerTarget, setHeaderTarget] = useState<HTMLElement | null>(null);
+  const hydrated = useHydrated();
+  const headerTarget = hydrated ? document.getElementById("calendar-header-slot") : null;
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [resizingEvent, setResizingEvent] = useState<CalendarEvent | null>(null);
   const [dragPreview, setDragPreview] = useState<EventDragPreview | null>(null);
@@ -85,6 +88,8 @@ export default function CalendarPage() {
     () => view === "day" ? [startOfDay(visibleDate)] : Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [view, visibleDate, weekStart],
   );
+  const rangeKey = `${today.getTime()}:${weekStart.getTime()}:${visibleDate.getTime()}`;
+  const [loading, setLoading] = useResettableState(rangeKey, true);
   const pickerDates = useMemo(() => monthGridDates(pickerMonth), [pickerMonth]);
   const previewEvent = useMemo(() => dragPreview && (draggedEvent || resizingEvent)
     ? {
@@ -96,10 +101,6 @@ export default function CalendarPage() {
   const previewPosition = useMemo(() => dragPreview && previewEvent
     ? eventPosition(previewEvent, dragPreview.day)
     : null, [dragPreview, previewEvent]);
-
-  useEffect(() => {
-    setHeaderTarget(document.getElementById("calendar-header-slot"));
-  }, []);
 
   useEffect(() => {
     const interval = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
@@ -125,7 +126,6 @@ export default function CalendarPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     const start = new Date(Math.min(today.getTime(), weekStart.getTime(), startOfDay(visibleDate).getTime()));
     const end = new Date(Math.max(addDays(today, 90).getTime(), addDays(weekStart, 7).getTime(), addDays(visibleDate, 1).getTime()));
     void authFetch(`/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`)

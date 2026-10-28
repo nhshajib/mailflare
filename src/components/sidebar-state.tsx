@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { fetchCurrentUser } from "@/hooks/use-current-user";
@@ -11,37 +13,18 @@ import type { SidebarProviderProps, SidebarState } from "./sidebar-state-types";
 const SidebarContext = createContext<SidebarState>({ minimal: false, width: 260, userId: null, toggle: () => undefined, setWidth: () => undefined, setForcedMinimal: () => undefined, mobile: false, mobileOpen: false });
 
 export function SidebarProvider({ children, expandedWidth = 260, mobileOverlay = false }: SidebarProviderProps) {
-	const [minimal, setMinimal] = useState(false);
-	const [forcedMinimal, setForcedMinimal] = useState(false);
-	const [width, setWidth] = useState(expandedWidth);
-	const [widthReady, setWidthReady] = useState(false);
-	const [userId, setUserId] = useState<string | null>(null);
-	const [storageKey, setStorageKey] = useState<string | null>(null);
+	const hydrated = useHydrated();
 	const pathname = usePathname();
 	const mobile = useIsMobile();
-	const [mobileOpen, setMobileOpen] = useState(false);
+	const [minimal, setMinimal] = useResettableState(`${hydrated}:${mobile}:${mobile ? pathname : ""}`, mobile ? true : hydrated ? readInitialSidebarMinimal() : false);
+	const [forcedMinimal, setForcedMinimal] = useState(false);
+	const [width, setWidth] = useResettableState(`${hydrated}:${expandedWidth}`, hydrated ? readInitialColumnWidth("sidebar", expandedWidth, 200, 480) : expandedWidth);
+	const widthReady = hydrated;
+	const [userId, setUserId] = useState<string | null>(null);
+	const [storageKey, setStorageKey] = useState<string | null>(null);
+	const [mobileOpen, setMobileOpen] = useResettableState(`${pathname}:${mobile}`, false);
 	// Overlay layouts have no minified rail on phones: the menu is either fully shown over the page or hidden.
 	const overlay = mobileOverlay && mobile;
-
-	useEffect(() => {
-		setMobileOpen(false);
-	}, [pathname, mobile]);
-
-	// Collapse on first load and after every navigation on phones, so the overlay never sticks open.
-	useEffect(() => {
-		if (mobile) setMinimal(true);
-	}, [pathname, mobile]);
-
-	useEffect(() => {
-		if (!mobile) setMinimal(readInitialSidebarMinimal());
-	}, [mobile]);
-
-	useLayoutEffect(() => {
-		setMinimal(readInitialSidebarMinimal());
-		setWidth(readInitialColumnWidth("sidebar", expandedWidth, 200, 480));
-		const frame = requestAnimationFrame(() => setWidthReady(true));
-		return () => cancelAnimationFrame(frame);
-	}, [expandedWidth]);
 
 	useLayoutEffect(() => {
 		syncInitialSidebarWidth(width, minimal);

@@ -10,19 +10,20 @@ import type { MessageNavigationState } from "./message-navigation-types";
 export function useMessageNavigation(href: string, message: Message): MessageNavigationState {
 	const pathname = usePathname();
 	const router = useRouter();
+	const [startedPath, setStartedPath] = useState<string | null>(null);
 	const [progress, setProgress] = useState<number | null>(null);
 
 	useEffect(() => {
-		if (progress === null) return;
-		setProgress(100);
+		if (progress === null || startedPath === pathname) return;
 		const timer = window.setTimeout(() => setProgress(null), 220);
 		return () => window.clearTimeout(timer);
-	}, [pathname]);
+	}, [pathname, startedPath, progress]);
 
 	function onNavigate(event: MouseEvent<HTMLAnchorElement>, markRead = false) {
 		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 		event.preventDefault();
 		primeMessageDetail({ ...message, read: markRead || message.read });
+		setStartedPath(pathname);
 		setProgress(12);
 		try {
 			router.push(href);
@@ -31,7 +32,7 @@ export function useMessageNavigation(href: string, message: Message): MessageNav
 		}
 	}
 
-	return { progress, onNavigate };
+	return { progress: progress !== null && startedPath !== pathname ? 100 : progress, onNavigate };
 }
 
 export function MessageNavigationProgress({ progress }: { progress: number | null }) {

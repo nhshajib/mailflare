@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Copy, Link2, X } from "lucide-react";
@@ -14,26 +16,25 @@ const selectClass = "h-10 rounded-md border border-neutral-200 bg-white px-2 tex
 
 export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItemDto | null; onClose: () => void; onChanged: () => void }) {
 	const { t } = useLanguage();
-	const [shares, setShares] = useState<DriveShareDto[]>([]);
-	const [linkToken, setLinkToken] = useState<string | null>(null);
-	const [email, setEmail] = useState("");
+	const id = item?.id;
+	const [sharesDraft, setShares] = useResettableState<DriveShareDto[] | null>(id, null);
+	const [linkTokenDraft, setLinkToken] = useResettableState<{ value: string | null } | null>(id, null);
+	const [email, setEmail] = useResettableState(id, "");
 	const [role, setRole] = useState<DriveShareRole>("view");
 	const [busy, setBusy] = useState(false);
-	const id = item?.id;
 
-	const load = useCallback(async () => {
-		if (!id) return;
-		const response = await authFetch(`/api/drive/items/${id}/shares`);
-		if (!response.ok) return toast.error(t("drive.shareFailed"));
-		const data = await response.json() as { shares: DriveShareDto[]; linkToken: string | null };
-		setShares(data.shares);
-		setLinkToken(data.linkToken);
-	}, [id, t]);
-
-	useEffect(() => {
-		setShares([]); setLinkToken(null); setEmail("");
-		void load();
-	}, [load]);
+  const query = useQuery({ queryKey: ["drive-shares", id], enabled: !!id, gcTime: 0, queryFn: async () => {
+    const response = await authFetch(`/api/drive/items/${id}/shares`);
+    if (!response.ok) throw new Error(t("drive.shareFailed"));
+    return await response.json() as { shares: DriveShareDto[]; linkToken: string | null };
+  } });
+  const shares = sharesDraft ?? query.data?.shares ?? [];
+  const linkToken = linkTokenDraft ? linkTokenDraft.value : query.data?.linkToken ?? null;
+  const load = async () => {
+    const result = await query.refetch();
+    if (result.error) { toast.error(t("drive.shareFailed")); return; }
+    setShares(result.data?.shares ?? []); setLinkToken({ value: result.data?.linkToken ?? null });
+  };
 
 	async function request(input: string, init: RequestInit) {
 		setBusy(true);
@@ -62,7 +63,7 @@ export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItem
 	async function toggleLink() {
 		if (!item) return;
 		const data = await request(`/api/drive/items/${item.id}/link`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: !linkToken }) });
-		if (data) setLinkToken(data.linkToken ?? null);
+		if (data) setLinkToken({ value: data.linkToken ?? null });
 	}
 
 	const linkUrl = linkToken ? `${window.location.origin}/d/${linkToken}` : "";
@@ -70,7 +71,8 @@ export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItem
 	return (
 		<Dialog open={!!item} onOpenChange={(open) => { if (!open) onClose(); }}>
 			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-				<DialogHeader><DialogTitle className="pr-6 truncate">{t("drive.shareTitle", { name: item?.name ?? "" })}</DialogTitle></DialogHeader>
+				{query.error && <p role="alert" className="text-sm text-red-600">{t("drive.shareFailed")}</p>}
+			<DialogHeader><DialogTitle className="pr-6 truncate">{t("drive.shareTitle", { name: item?.name ?? "" })}</DialogTitle></DialogHeader>
 				<form onSubmit={addPerson} className="flex gap-2">
 					<Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder={t("drive.shareEmail")} aria-label={t("drive.shareEmail")} />
 					<select value={role} onChange={(event) => setRole(event.target.value as DriveShareRole)} className={selectClass} aria-label={t("drive.peopleWithAccess")}>

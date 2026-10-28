@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Camera, LoaderCircle, User } from "lucide-react";
@@ -22,16 +23,12 @@ export default function MailboxAvatarForm({
 }: MailboxAvatarFormProps) {
 	const { t } = useLanguage();
 	const queryClient = useQueryClient();
-	const [hasAvatar, setHasAvatar] = useState(initialHasAvatar);
-	const [avatarUrl, setAvatarUrl] = useState(`/api/mailboxes/${mailboxId}/avatar`);
+	const [hasAvatar, setHasAvatar] = useResettableState(`${mailboxId}:${initialHasAvatar}`, initialHasAvatar);
+	const [avatarUrl, setAvatarUrl] = useResettableState(`${mailboxId}:${initialHasAvatar}`, `/api/mailboxes/${mailboxId}/avatar`);
 	const [status, setStatus] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	useEffect(() => {
-		setHasAvatar(initialHasAvatar);
-		setAvatarUrl(`/api/mailboxes/${mailboxId}/avatar`);
-	}, [initialHasAvatar, mailboxId]);
 
 	async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
 		const picked = event.target.files?.[0] ?? null;

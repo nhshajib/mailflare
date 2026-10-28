@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import clsx from "clsx";
 import { ChevronUp } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -17,12 +18,9 @@ type SectionNavSheetProps = {
 export function SectionNavSheet({ label, title, children, className }: SectionNavSheetProps) {
 	const mobile = useIsMobile();
 	const pathname = usePathname();
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useResettableState(`${pathname}:${mobile}`, false);
 	const hidden = mobile && !open;
 
-	useEffect(() => {
-		setOpen(false);
-	}, [pathname, mobile]);
 
 	useEffect(() => {
 		if (!open) return;

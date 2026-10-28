@@ -22,28 +22,24 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 	const [loaded, setLoaded] = useState(false);
 	const previous = useRef<Map<string, ImportJobSummary["status"]>>(new Map());
 
-	const load = useCallback(async () => {
-		try {
-			const next = await fetchImportJobs();
-			const finishedNow = next.some((job) => {
-				const before = previous.current.get(job.id);
-				return !!before && (before === "queued" || before === "running") && !isImportJobActive(job);
-			});
-			previous.current = new Map(next.map((job) => [job.id, job.status]));
-			setJobs(next);
-			if (finishedNow) window.dispatchEvent(new Event("mailflare:messages-changed"));
-		} catch {
-			// Keep the last list; the next poll retries.
-		} finally {
-			setLoaded(true);
-		}
-	}, []);
+	const receive = useCallback((next: ImportJobSummary[]) => {
+    const finishedNow = next.some(job => {
+      const before = previous.current.get(job.id);
+      return !!before && (before === "queued" || before === "running") && !isImportJobActive(job);
+    });
+    previous.current = new Map(next.map(job => [job.id, job.status]));
+    setJobs(next); setLoaded(true);
+    if (finishedNow) window.dispatchEvent(new Event("mailflare:messages-changed"));
+  }, []);
+  const load = useCallback(async () => { try { receive(await fetchImportJobs()); } catch { setLoaded(true); } }, [receive]);
 
 	const hasActive = jobs.some(isImportJobActive);
 
 	useEffect(() => {
-		void load();
-	}, [load, refreshKey]);
+    let active = true;
+    void fetchImportJobs().then(next => { if (active) receive(next); }).catch(() => { if (active) setLoaded(true); });
+    return () => { active = false; };
+  }, [receive, refreshKey]);
 
 	useEffect(() => {
 		if (!hasActive) return;

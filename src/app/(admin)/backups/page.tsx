@@ -52,7 +52,7 @@ export default function BackupsPage() {
   const queryClient = useQueryClient();
   const restoreInput = useRef<HTMLInputElement | null>(null);
   const savedSettings = useRef<BackupSettings | null>(null);
-  const [settings, setSettings] = useState<BackupSettings | null>(null);
+  const [settingsDraft, setSettings] = useState<BackupSettings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const backups = useQuery({
     queryKey: ["backups"],
@@ -65,12 +65,7 @@ export default function BackupsPage() {
         : false,
   });
 
-  useEffect(() => {
-    if (backups.data?.settings && !settings) {
-      savedSettings.current = backups.data.settings;
-      setSettings(backups.data.settings);
-    }
-  }, [backups.data?.settings, settings]);
+  const settings = settingsDraft ?? backups.data?.settings ?? null;
 
   const saveSettings = useMutation({
     mutationFn: saveBackupSettings,
@@ -83,9 +78,9 @@ export default function BackupsPage() {
 
   const autoSaveSettings = useMutation({
     mutationFn: saveBackupSettings,
-    onMutate: (nextSettings) => setSettings(nextSettings),
+    onMutate: (nextSettings) => { savedSettings.current = settings; setSettings(nextSettings); },
     onSuccess: (_data, nextSettings) => { savedSettings.current = nextSettings; },
-    onError: () => { if (savedSettings.current) setSettings(savedSettings.current); },
+    onError: () => { setSettings(savedSettings.current ?? backups.data?.settings ?? null); },
   });
 
   const runBackup = useMutation({

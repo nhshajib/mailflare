@@ -1,3 +1,4 @@
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import type { MessageCounts, MessageCountsDelta } from "./types";
 import { clearMessageCountsCache, fetchMessageCounts } from "./utils";
@@ -22,13 +23,10 @@ const emptyCounts: MessageCounts = {
 
 export function useMessageCounts(mailboxId?: string | null, enabled = true) {
 	const [counts, setCounts] = useState<MessageCounts>(emptyCounts);
-	const [isLoading, setIsLoading] = useState(enabled);
+	const [isLoading, setIsLoading] = useResettableState(`${mailboxId}:${enabled}`, enabled);
 
 	useEffect(() => {
-		if (!enabled) {
-			setIsLoading(false);
-			return;
-		}
+		if (!enabled) return;
 
 		let cancelled = false;
 		let refreshTimer: number | null = null;
@@ -36,7 +34,6 @@ export function useMessageCounts(mailboxId?: string | null, enabled = true) {
 
 		async function loadCounts() {
 			const currentRequest = ++requestNumber;
-			setIsLoading(true);
 			try {
 				const nextCounts = await fetchMessageCounts(mailboxId);
 				if (!cancelled && currentRequest === requestNumber) setCounts(nextCounts ?? emptyCounts);
@@ -47,6 +44,7 @@ export function useMessageCounts(mailboxId?: string | null, enabled = true) {
 
 		void loadCounts();
 		function onMessagesChanged() {
+			setIsLoading(true);
 			clearMessageCountsCache();
 			if (document.visibilityState !== "visible") return;
 			if (refreshTimer) window.clearTimeout(refreshTimer);

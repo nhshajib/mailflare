@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Cloud, ExternalLink } from "lucide-react";
@@ -55,8 +56,8 @@ export default function MessageDetailPage() {
   const [loading, setLoading] = useState(true);
   const [previewAttachment, setPreviewAttachment] =
     useState<MessageAttachment | null>(null);
-  const [threadExpanded, setThreadExpanded] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [threadExpanded, setThreadExpanded] = useResettableState(messageId, false);
+  const [detailsOpen, setDetailsOpen] = useResettableState(messageId, false);
   const [latestMessagesFirst] = useLatestMessagesFirst();
   const { enabled: showFullRecipientAddresses } = useShowFullRecipientAddresses();
   const remote = useRemoteContent(
@@ -101,10 +102,6 @@ export default function MessageDetailPage() {
     };
   }, [messageId]);
 
-  useEffect(() => {
-    setThreadExpanded(false);
-    setDetailsOpen(false);
-  }, [messageId]);
 
   if (loading) {
     return <MessageDetailSkeleton />;

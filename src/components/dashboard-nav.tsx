@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import type { FormEvent } from "react";
 import { useLanguage } from "./language-provider";
 import { folderColorKeys } from "@/lib/folders/color-keys";
@@ -100,12 +102,13 @@ export function DashboardNav({ className }: { className?: string }) {
   const { t } = useLanguage();
   const { minimal, mobile } = useSidebar();
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [foldersOpen, setFoldersOpen] = useState(false);
+  const hydrated = useHydrated();
+  const [moreOpen, setMoreOpen] = useResettableState(hydrated, hydrated ? readStorage(MORE_OPEN_KEY, false) : false);
+  const [foldersOpen, setFoldersOpen] = useResettableState(hydrated, hydrated ? readStorage(FOLDERS_OPEN_KEY, false) : false);
   const [foldersSectionOpen, toggleFoldersSection] = useSectionOpen("mailflare:nav:folders-section-open");
   const { selectedMailbox, isLoading } = useSelectedMailbox();
   const { counts } = useMessageCounts(selectedMailbox?.id, !isLoading);
-  const [folders, setFolders] = useState<CustomFolder[]>([]);
+  const [folders, setFolders] = useResettableState<CustomFolder[]>(selectedMailbox?.id, []);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] =
     useState<FolderColor>(DEFAULT_FOLDER_COLOR);
@@ -158,10 +161,6 @@ export function DashboardNav({ className }: { className?: string }) {
     return link;
   });
 
-  useEffect(() => {
-    setMoreOpen(readStorage(MORE_OPEN_KEY, false));
-    setFoldersOpen(readStorage(FOLDERS_OPEN_KEY, false));
-  }, []);
 
   useEffect(() => {
     const reset = () => setFolders([]);
@@ -188,10 +187,7 @@ export function DashboardNav({ className }: { className?: string }) {
   const foldersOverflow = !minimal && folders.length > MAX_VISIBLE_FOLDERS;
 
   useEffect(() => {
-    if (!selectedMailbox?.id) {
-      setFolders([]);
-      return;
-    }
+    if (!selectedMailbox?.id) return;
 
     let cancelled = false;
     getMailboxFolders<{ folders?: CustomFolder[] }>(selectedMailbox.id)
