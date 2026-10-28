@@ -133,7 +133,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
       description={
         adding
           ? t("auth.addDescription")
-          : t("auth.signInDescription")
+          : "Sign in to your TypeWit mailbox."
       }
     >
       <form method="post" onSubmit={onSubmit} className="space-y-5">
