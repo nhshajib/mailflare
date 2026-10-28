@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { isUniqueConstraintError } from "@/lib/database-errors";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
@@ -84,11 +85,14 @@ export async function createTypewitAccount(
       account: { id: userId, email, name: input.name ?? username, role: "user" },
       mailbox: { id: mailboxId, address: email },
     }, { status: 201 });
-  } catch {
+  } catch (error) {
     const cleanup = await Promise.allSettled([
       rollbackEmailRoutingRuleChanges(env, changes),
       ...(inserted ? [db.delete(users).where(eq(users.id, userId))] : []),
     ]);
+    if (!inserted && isUniqueConstraintError(error)) {
+      return NextResponse.json({ error: "Address already assigned" }, { status: 409 });
+    }
     return NextResponse.json({
       error: cleanup.some((task) => task.status === "rejected")
         ? "Account setup failed; cleanup requires administrator review before retrying"
