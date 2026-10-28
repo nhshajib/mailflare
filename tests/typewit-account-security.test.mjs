@@ -43,3 +43,10 @@ test("failed routing disables account and rolls routing back before deletion", (
   assert.ok(disableIndex >= 0 && rollbackIndex > disableIndex && deleteIndex > rollbackIndex);
   assert.match(create, /cleanup needs administrator review/);
 });
+
+test("account is activated only after routing is established", () => {
+  assert.match(create, /role: "user", createdByUserId: primaryAdminUserId, disabled: true/);
+  const routeIndex = create.indexOf("await ensureMailboxDomainRouting(env, db, mailbox, changes)");
+  const activateIndex = create.indexOf("await db.update(users).set({ disabled: false })");
+  assert.ok(routeIndex >= 0 && activateIndex > routeIndex);
+});
