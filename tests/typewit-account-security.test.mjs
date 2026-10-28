@@ -30,3 +30,8 @@ test("new account and mailbox commit atomically with failure cleanup", () => {
 test("no entitlement or license state changes are introduced in TypeWit endpoint", () => {
   assert.doesNotMatch(create + route, /licenseSettings|updateLicenseFromPaymug|canManageAccounts\s*:/);
 });
+
+test("concurrent duplicate address errors return conflict rather than generic failure", () => {
+  assert.match(create, /isUniqueConstraintError\(error\)/);
+  assert.match(create, /status: 409/);
+});
