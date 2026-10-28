@@ -61,7 +61,11 @@ export async function POST(request: Request) {
     }
     const parsed = typewitCreateAccountSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    return createTypewitAccount(env, viewer.id, parsed.data);
+    try {
+      return await createTypewitAccount(env, viewer.id, parsed.data);
+    } catch {
+      return NextResponse.json({ error: "Account provisioning unavailable" }, { status: 500 });
+    }
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
