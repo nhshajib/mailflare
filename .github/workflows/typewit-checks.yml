@@ -10,6 +10,8 @@ on:
       - "src/app/layout.tsx"
       - "tests/typewit-*.test.mjs"
       - ".github/workflows/typewit-checks.yml"
+      - ".github/workflows/typewit-staging-deploy.yml"
+      - "scripts/verify-typewit-staging-output.mjs"
       - "wrangler.staging.jsonc"
   workflow_dispatch:
 permissions:
