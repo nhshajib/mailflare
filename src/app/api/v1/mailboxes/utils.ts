@@ -1,3 +1,4 @@
+import { isUniqueConstraintError } from "@/lib/database-errors";
 import { NextResponse } from "next/server";
 import { and, eq, or } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
@@ -44,7 +45,13 @@ export async function POST(request: Request) {
 	const [alias] = await db.select({ id: mailboxAliases.id }).from(mailboxAliases).where(and(eq(mailboxAliases.domainId, domain.id), eq(mailboxAliases.localPart, localPart))).limit(1);
 	if (alias) return NextResponse.json({ error: "An alias already uses this address" }, { status: 409 });
 	const id = newId("mbx");
+	try {
 	await db.insert(mailboxes).values({ id, userId: ownerUserId, domainId: domain.id, localPart, displayName: parsed.data.displayName, type: mailboxType });
+	} catch (error) {
+		if (isUniqueConstraintError(error)) return NextResponse.json({ error: "Address already assigned" }, { status: 409 });
+		throw error;
+	}
+
 	try {
 		await ensureMailboxDomainRouting(env, db, { id, domainId: domain.id, localPart, useAllDomains: true });
 	} catch (error) {

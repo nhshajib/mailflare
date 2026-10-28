@@ -22,6 +22,20 @@
       "when": 1793195187156,
       "tag": "0002_plain_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793197405856,
+      "tag": "0003_hot_blazing_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793197571935,
+      "tag": "0004_amazing_ultimo",
+      "breakpoints": true
     }
   ]
 }

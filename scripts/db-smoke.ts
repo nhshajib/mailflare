@@ -5,7 +5,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 import { createDb } from "@/db";
-import { users, domains, mailboxes, messages, folders, jmapChanges, appSettings, webhooks, spamTokenStats, spamReputation } from "@/db/schema";
+import { users, domains, mailboxes, mailboxAliases, messages, folders, jmapChanges, appSettings, webhooks, spamTokenStats, spamReputation } from "@/db/schema";
 import { getDatabaseConfig } from "@/db/with-database";
 import { openExternalDatabase } from "@/db/external";
 import { applyPendingMigrations, getMigrationStatus } from "@/lib/migrations/service";
@@ -44,6 +44,19 @@ check("timestamp is a recent Date", Math.abs(user.createdAt.getTime() - Date.now
 
 await db.insert(domains).values({ id: `dom_${stamp}`, userId, hostname: `${stamp}.example.com`, zoneId: "z" });
 await db.insert(mailboxes).values({ id: `mbx_${stamp}`, userId, domainId: `dom_${stamp}`, localPart: "me" });
+// The shared address ledger must arbitrate conflicts across both source tables.
+await db.insert(mailboxAliases).values({ id: `als_claim_${stamp}`, mailboxId: `mbx_${stamp}`, domainId: `dom_${stamp}`, localPart: "b.oo.k+tag" });
+let claimRejected = false;
+try {
+  await db.insert(mailboxes).values({ id: `mbx_claim_${stamp}`, userId, domainId: `dom_${stamp}`, localPart: "BOOK" });
+} catch (error) { claimRejected = isUniqueConstraintError(error); }
+check("normalized cross-table address collision rejected", claimRejected);
+await db.delete(mailboxAliases).where(eq(mailboxAliases.id, `als_claim_${stamp}`));
+await db.insert(mailboxes).values({ id: `mbx_claim_${stamp}`, userId, domainId: `dom_${stamp}`, localPart: "book" });
+check("deleted alias releases its address", (await db.select().from(mailboxes).where(eq(mailboxes.id, `mbx_claim_${stamp}`))).length === 1);
+await db.delete(mailboxes).where(eq(mailboxes.id, `mbx_claim_${stamp}`));
+const leakedClaims = await db.all<{ n: number }>(sql`SELECT count(*) AS n FROM mailbox_address_claims WHERE domain_id = ${`dom_${stamp}`} AND local_part = 'book'`);
+check("deleted mailbox releases its derived claim", Number(leakedClaims[0].n) === 0);
 await db.insert(messages).values({ id: `msg_${stamp}`, userId, mailboxId: `mbx_${stamp}`, direction: "inbound", fromAddr: "x@y.z", toAddr: "me@example.com", subject: "Quarterly Report", textBody: "numbers inside", status: "received" } as never);
 const changes = await db.select().from(jmapChanges).where(eq(jmapChanges.mailboxId, `mbx_${stamp}`));
 check("trigger wrote jmap_changes", changes.length >= 1 && changes[0].change === "created");

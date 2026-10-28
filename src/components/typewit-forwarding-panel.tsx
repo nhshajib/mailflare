@@ -13,10 +13,11 @@ export function TypewitForwardingPanel() {
   const query = useQuery({ queryKey: ["typewit-forwarding"], queryFn: async () => {
     const response = await authFetch("/api/typewit/forwarding");
     if (!response.ok) throw new Error("Forwarding rules are unavailable");
-    return await response.json() as { sources: Source[]; rules: Rule[]; available: boolean };
+    return await response.json() as { sources: Source[]; rules: Rule[]; deliveryCounts: { mailboxId: string; state: string; count: number }[]; available: boolean };
   } });
   const sources = query.data?.sources ?? [];
   const rules = query.data?.rules ?? [];
+  const deliveryCounts = query.data?.deliveryCounts ?? [];
   const available = query.data?.available ?? false;
   const selectedMailboxId = mailboxId || sources[0]?.id || "";
   async function save(rule: Rule) {
@@ -48,7 +49,7 @@ export function TypewitForwardingPanel() {
     <ul className="divide-y">
       {rules.length === 0 && <li className="py-2 text-sm text-neutral-600">No forwarding rules configured.</li>}
       {rules.map(rule => <li key={rule.mailboxId} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-        <span className="min-w-0 break-all">{sources.find(source => source.id === rule.mailboxId)?.localPart ?? "Mailbox"} → {rule.destination}<span className="block text-neutral-500">{rule.enabled ? "Enabled" : "Disabled"}</span></span>
+        <span className="min-w-0 break-all">{sources.find(source => source.id === rule.mailboxId)?.localPart ?? "Mailbox"} → {rule.destination}<span className="block text-neutral-500">{rule.enabled ? "Enabled" : "Disabled"}</span><span className="block text-xs text-neutral-500">{deliveryCounts.filter(item => item.mailboxId === rule.mailboxId).map(item => `${item.count} ${item.state}`).join(" · ")}</span></span>
         {rule.enabled && <button type="button" disabled={busy} className="rounded-lg border px-3 py-2" onClick={() => void save({ ...rule, enabled: false })}>Disable forwarding</button>}
       </li>)}
     </ul>

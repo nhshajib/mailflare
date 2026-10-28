@@ -155,3 +155,21 @@ test("legacy mixed-case logins cannot claim a second normalized account", async 
   fixture.sqlite.exec("UPDATE users SET email='ALICE@EXAMPLE.TEST' WHERE id='user'");
   assert.equal((await runtime.accounts.POST(request("POST", input()))).status, 409);
 });
+
+test("an alias inserted after preflight wins atomically without leaving a partial account", async () => {
+  fixture.sqlite.exec("INSERT INTO mailboxes(id,user_id,domain_id,local_part,created_at) VALUES ('owner','user','domain','existing',0)");
+  const original = fixture.DB.batch;
+  let intercepted = false;
+  fixture.DB.batch = async queries => {
+    if (!intercepted) {
+      intercepted = true;
+      fixture.sqlite.exec("INSERT INTO mailbox_aliases(id,mailbox_id,domain_id,local_part,created_at) VALUES ('concurrent','owner','domain','a.li.ce+tag',0)");
+    }
+    return original(queries);
+  };
+  const response = await runtime.accounts.POST(request("POST", input()));
+  assert.equal(response.status, 409);
+  assert.equal(fixture.sqlite.prepare("SELECT count(*) AS n FROM users").get().n, 2);
+  assert.equal(fixture.sqlite.prepare("SELECT count(*) AS n FROM typewit_accounts").get().n, 0);
+  assert.equal(fixture.sqlite.prepare("SELECT count(*) AS n FROM mailbox_address_claims WHERE local_part='alice'").get().n, 1);
+});

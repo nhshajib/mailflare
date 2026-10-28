@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { domains, mailboxes, typewitForwarding } from "@/db/schema";
+import { domains, mailboxes, typewitForwarding, typewitForwardingAttempts } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { requireTypewitAdmin, typewitMutation, typewitError, TypewitHttpError } from "@/lib/typewit/http";
@@ -17,7 +17,9 @@ export async function GET(request: Request) {
     const rules = await db.select().from(typewitForwarding).limit(100);
     const sources = await db.select({ id: mailboxes.id, localPart: mailboxes.localPart, hostname: domains.hostname }).from(mailboxes)
       .innerJoin(domains, eq(mailboxes.domainId, domains.id)).where(and(eq(domains.userId, viewer.id), eq(domains.receivingProvider, "cloudflare"))).limit(100);
-    return NextResponse.json({ rules, sources, available: env.TYPEWIT_FORWARDING_ENABLED === "true" && env.TYPEWIT_STAGING !== "true" }, { headers: { "Cache-Control": "private, no-store" } });
+    const deliveryCounts = await db.select({ mailboxId: typewitForwardingAttempts.mailboxId, state: typewitForwardingAttempts.state, count: sql<number>`count(*)` })
+      .from(typewitForwardingAttempts).groupBy(typewitForwardingAttempts.mailboxId, typewitForwardingAttempts.state).limit(300);
+    return NextResponse.json({ rules, sources, deliveryCounts, available: env.TYPEWIT_FORWARDING_ENABLED === "true" && env.TYPEWIT_STAGING !== "true" }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) { return typewitError(error); }
 }
 

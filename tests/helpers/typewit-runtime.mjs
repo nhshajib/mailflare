@@ -41,7 +41,7 @@ export function testDatabase({ beforeTypewit = false } = {}) {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys=ON");
   for (const name of readdirSync("drizzle/migrations").filter(x => x.endsWith(".sql")).sort()) {
-    if (beforeTypewit && name.startsWith("0078_")) continue;
+    if (beforeTypewit && Number(name.slice(0, 4)) >= 78) continue;
     sqlite.exec(readFileSync(join("drizzle/migrations", name), "utf8"));
   }
   const statement = (query, values = []) => ({
