@@ -26,5 +26,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: TypeWit source regression checks
         run: node --test tests/typewit-*.test.mjs
+      - name: Generate local migration bundle
+        run: npm run db:bundle
       - name: TypeScript check
         run: npx tsc --noEmit
