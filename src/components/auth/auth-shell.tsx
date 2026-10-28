@@ -12,14 +12,14 @@ export function AuthShell({
 }: AuthShellProps) {
   return (
     <div className="min-h-dvh bg-[#f1f4fa] text-neutral-900 sm:flex sm:items-center sm:justify-center sm:px-6 sm:py-10">
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-white px-7 py-9 sm:min-h-0 sm:rounded-3xl sm:px-10 sm:py-10 sm:shadow-xl">
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-white px-6 py-8 sm:min-h-0 sm:rounded-3xl sm:px-10 sm:py-10 sm:shadow-xl">
         <header className="flex flex-col items-center text-center">
           <img
             src="/typewit-logo.png"
             alt="TypeWit"
-            className="h-auto w-auto max-w-[195px] object-contain"
+            className="h-auto w-auto max-w-[180px] object-contain sm:max-w-[195px]"
           />
-          <h1 className="mt-8 text-3xl font-medium tracking-tight text-neutral-950 sm:text-4xl">
+          <h1 className="mt-6 text-3xl font-medium tracking-tight text-neutral-950 sm:text-4xl">
             {title}
           </h1>
           {description && (
@@ -29,7 +29,7 @@ export function AuthShell({
           )}
         </header>
 
-        <section className="mt-8 min-w-0">
+        <section className="mt-6 min-w-0 sm:mt-8">
           {steps && (
             <div className="mb-7 flex flex-wrap gap-2 text-xs font-semibold">
               {steps.map((step, index) => (
