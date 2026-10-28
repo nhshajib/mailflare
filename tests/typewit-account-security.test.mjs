@@ -35,3 +35,11 @@ test("concurrent duplicate address errors return conflict rather than generic fa
   assert.match(create, /isUniqueConstraintError\(error\)/);
   assert.match(create, /status: 409/);
 });
+
+test("failed routing disables account and rolls routing back before deletion", () => {
+  const disableIndex = create.indexOf("await db.update(users).set({ disabled: true })");
+  const rollbackIndex = create.indexOf("await rollbackEmailRoutingRuleChanges(env, changes)");
+  const deleteIndex = create.indexOf("await db.delete(users).where(eq(users.id, userId))");
+  assert.ok(disableIndex >= 0 && rollbackIndex > disableIndex && deleteIndex > rollbackIndex);
+  assert.match(create, /cleanup needs administrator review/);
+});
