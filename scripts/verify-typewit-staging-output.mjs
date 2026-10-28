@@ -12,7 +12,7 @@ const expected = {
     "typewit-mail-staging-agent",
   ],
 };
-const file = resolve("dist/wrangler.json");
+const file = resolve("dist/server/wrangler.json");
 assert.ok(existsSync(file), "Vite output dist/wrangler.json not found; refusing deployment");
 const config = JSON.parse(readFileSync(file, "utf8"));
 assert.equal(config.name, expected.name);
