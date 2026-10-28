@@ -21,6 +21,7 @@ import { ShortcutsProvider } from "@/components/shortcuts";
 import { RouteTitle } from "@/components/route-title";
 
 const primaryOnlyPrefixes = [
+  "/typewit-accounts",
   "/agent",
   "/api-keys",
   "/webhooks",
