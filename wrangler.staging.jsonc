@@ -7,7 +7,7 @@
   "compatibility_date": "2026-05-20",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  "assets": { "binding": "ASSETS", "not_found_handling": "none" },
+  "assets": { "binding": "ASSETS", "directory": "./dist/client", "not_found_handling": "none" },
   "images": { "binding": "IMAGES" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "typewit-mail-staging" }],
   "durable_objects": {
