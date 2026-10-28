@@ -33,5 +33,5 @@ jobs:
         run: npx tsc --noEmit
       - name: Production build (no deployment)
         run: npm run build
-      - name: Validate isolated staging Worker bundle (dry run only)
-        run: npx wrangler deploy --dry-run --config wrangler.staging.jsonc --outdir /tmp/typewit-staging-dry-run
+      - name: Verify staging configuration is isolated (no deployment)
+        run: node tests/typewit-staging-config.test.mjs
