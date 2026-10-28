@@ -86,17 +86,26 @@ export async function createTypewitAccount(
       mailbox: { id: mailboxId, address: email },
     }, { status: 201 });
   } catch (error) {
-    const cleanup = await Promise.allSettled([
-      rollbackEmailRoutingRuleChanges(env, changes),
-      ...(inserted ? [db.delete(users).where(eq(users.id, userId))] : []),
-    ]);
-    if (!inserted && isUniqueConstraintError(error)) {
-      return NextResponse.json({ error: "Address already assigned" }, { status: 409 });
+    if (!inserted) {
+      if (isUniqueConstraintError(error)) {
+        return NextResponse.json({ error: "Address already assigned" }, { status: 409 });
+      }
+      return NextResponse.json({ error: "Account setup failed before provisioning" }, { status: 502 });
     }
-    return NextResponse.json({
-      error: cleanup.some((task) => task.status === "rejected")
-        ? "Account setup failed; cleanup requires administrator review before retrying"
-        : "Account setup failed; no account was provisioned",
-    }, { status: 502 });
+
+    // Disable the user immediately, then roll routing changes back before
+    // removing its database records. On uncertain cleanup, keep the disabled
+    // account for administrator investigation rather than leaving an orphan
+    // route pointing at a deleted mailbox.
+    try {
+      await db.update(users).set({ disabled: true }).where(eq(users.id, userId));
+      await rollbackEmailRoutingRuleChanges(env, changes);
+      await db.delete(users).where(eq(users.id, userId));
+      return NextResponse.json({ error: "Account setup failed; changes were rolled back" }, { status: 502 });
+    } catch {
+      return NextResponse.json({
+        error: "Account setup failed and cleanup needs administrator review; do not retry until routing and account records are checked",
+      }, { status: 502 });
+    }
   }
 }
