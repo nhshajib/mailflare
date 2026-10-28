@@ -21,14 +21,13 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-	const { appName } = await getHomeBranding();
 	return {
-		title: appName,
-		description: "Multi-tenant email on Cloudflare",
-		icons: { icon: "/api/branding/icon", apple: "/icon-192.png" },
+		title: "TypeWit Mail",
+		description: "TypeWit Mail — private email for the TypeWit team.",
+		icons: { icon: "/icon.png", apple: "/icon.png" },
 		appleWebApp: {
 			capable: true,
-			title: appName,
+			title: "TypeWit Mail",
 			statusBarStyle: "default",
 		},
 		robots: {
@@ -57,7 +56,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: sidebarBootstrapScript }} />
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-				<link rel="icon" href="/api/branding/icon"></link>
+				<link rel="icon" href="/icon.png" />
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<LanguageProvider initialLocale={locale} initialMessages={messages}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
