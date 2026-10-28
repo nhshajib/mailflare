@@ -27,6 +27,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Audit production dependencies for high or critical advisories
+        run: npm audit --omit=dev --audit-level=high
       - name: TypeWit source regression checks
         run: node --test tests/typewit-*.test.mjs
       - name: Generate local migration bundle
