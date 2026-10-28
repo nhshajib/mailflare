@@ -50,3 +50,9 @@ test("account is activated only after routing is established", () => {
   const activateIndex = create.indexOf("await db.update(users).set({ disabled: false })");
   assert.ok(routeIndex >= 0 && activateIndex > routeIndex);
 });
+
+test("unexpected provisioning errors are server errors, not authorization failures", () => {
+  assert.match(route, /await createTypewitAccount\(env, viewer\.id, parsed\.data\)/);
+  assert.match(route, /Account provisioning unavailable/);
+  assert.match(route, /status: 500/);
+});
