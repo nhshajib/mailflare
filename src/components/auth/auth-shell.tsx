@@ -24,8 +24,7 @@ export function AuthShell({
 
   return (
     <div className="min-h-dvh bg-[#f1f4fa] text-neutral-900 sm:px-6 sm:py-6 lg:flex lg:items-center lg:px-10 lg:py-10">
-      <main className="mx-auto grid min-h-dvh w-full max-w-4xl grid-rows-[auto_1fr] overflow-hidden bg-white sm:min-h-0 sm:grid-rows-none sm:rounded-4xl lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-        <section className="flex flex-col p-7 sm:p-10 lg:p-14">
+<main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center overflow-hidden bg-white sm:min-h-0 sm:rounded-3xl sm:shadow-xl">        <section className="flex flex-col items-center p-7 pb-0 text-center sm:p-10 sm:pb-0">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center overflow-hidden">
               {iconFailed ? (
@@ -43,7 +42,7 @@ export function AuthShell({
               )}
             </span>
             <span className="truncate text-md font-semibold text-neutral-800">
-              {branding.appName}
+              TypeWit Mail
             </span>
           </div>
 
@@ -63,7 +62,7 @@ export function AuthShell({
           </div>
         </section>
 
-        <section className="flex min-w-0 flex-col justify-start px-7 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-0 sm:justify-center sm:p-10 lg:p-14">
+        <section className="flex min-w-0 flex-col px-7 pb-10 pt-6 sm:px-10">
           {steps && (
             <div className="mb-7 flex flex-wrap gap-2 text-xs font-semibold">
               {steps.map((step, index) => (
@@ -96,3 +95,4 @@ export function AuthShell({
     </div>
   );
 }
+// TypeWit login layout
