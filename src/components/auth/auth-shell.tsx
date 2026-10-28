@@ -43,7 +43,7 @@ export function AuthShell({
               )}
             </span>
             <span className="truncate text-md font-semibold text-neutral-800">
-              {branding.appName}
+              TypeWit Mail
             </span>
           </div>
 
