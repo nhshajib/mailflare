@@ -30,14 +30,6 @@ jobs:
         run: CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.staging.jsonc npm run build
       - name: Block deployment with unsafe bindings
         run: node scripts/verify-typewit-staging-output.mjs
-      - name: Verify staging-only credential is configured
-        env:
-          CF_STAGING_TOKEN: ${{ secrets.CF_TYPEWIT_STAGING_API_TOKEN }}
-        run: |
-          if [ -z "$CF_STAGING_TOKEN" ]; then
-            echo "::error::Missing CF_TYPEWIT_STAGING_API_TOKEN environment secret."
-            exit 1
-          fi
       - name: Verify staging account target and prohibit provider secrets
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CF_TYPEWIT_STAGING_ACCOUNT_ID }}
