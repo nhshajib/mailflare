@@ -1,0 +1,30 @@
+name: TypeWit development checks
+on:
+  pull_request:
+    paths:
+      - "src/app/api/typewit/**"
+      - "src/app/(admin)/typewit-accounts/**"
+      - "src/app/(admin)/layout.tsx"
+      - "src/lib/typewit/**"
+      - "src/components/auth/auth-shell.tsx"
+      - "src/app/layout.tsx"
+      - "tests/typewit-*.test.mjs"
+      - ".github/workflows/typewit-checks.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: TypeWit source regression checks
+        run: node --test tests/typewit-*.test.mjs
+      - name: TypeScript check
+        run: npx tsc --noEmit
