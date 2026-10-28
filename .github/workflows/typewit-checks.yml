@@ -35,3 +35,5 @@ jobs:
         run: npm run build
       - name: Verify staging configuration is isolated (no deployment)
         run: node tests/typewit-staging-config.test.mjs
+      - name: Build staging Worker using Cloudflare Vite plugin (no deployment)
+        run: CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.staging.jsonc npm run build
