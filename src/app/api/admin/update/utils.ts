@@ -92,15 +92,6 @@ async function githubRequest<T>(
     },
   });
 
-  console.log(`[gg]`, `${GITHUB_API_URL}${path}`);
-
-  if (response.statusText === "Forbidden") {
-    return {
-      response,
-      data: { error: response.statusText } as any,
-    };
-  }
-
   const data =
     response.status === 204 ? undefined : ((await response.json()) as T);
 

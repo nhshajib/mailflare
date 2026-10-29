@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowDownToLine, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,6 @@ export function MessageAttachmentViewer({
 	open,
 }: MessageAttachmentViewerProps) {
 	const { t } = useLanguage();
-	const [textContent, setTextContent] = useState("");
-	const [textError, setTextError] = useState("");
 
 	const previewKind = attachment ? getAttachmentPreviewKind(attachment) : "unsupported";
 	const previewUrl = attachment
@@ -37,28 +36,16 @@ export function MessageAttachmentViewer({
 		? getAttachmentFileUrl(messageId, attachment.id, "download")
 		: "";
 
-	useEffect(() => {
-		if (!open || !attachment || previewKind !== "text") return;
-		let cancelled = false;
-		setTextContent("");
-		setTextError("");
-
-		authFetch(previewUrl)
-			.then(async (response) => {
-				if (!response.ok) throw new Error(t("attachment.loadFailed"));
-				const content = await response.text();
-				if (!cancelled) setTextContent(content);
-			})
-			.catch((error) => {
-				if (!cancelled) {
-					setTextError(error instanceof Error ? error.message : t("attachment.loadFailed"));
-				}
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [attachment, open, previewKind, previewUrl, t]);
+  const preview = useQuery({ queryKey: ["attachment-text", previewUrl, open],
+    enabled: open && !!attachment && previewKind === "text", gcTime: 0,
+    queryFn: async ({ signal }) => {
+      const response = await authFetch(previewUrl, { signal });
+      if (!response.ok) throw new Error(t("attachment.loadFailed"));
+      return response.text();
+    },
+  });
+  const textContent = preview.data ?? "";
+  const textError = preview.error ? t("attachment.loadFailed") : "";
 
 	if (!attachment) return null;
 

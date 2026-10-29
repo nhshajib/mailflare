@@ -28,16 +28,16 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
   const { selectedMailbox } = useSelectedMailbox();
   const { minimal } = useSidebar();
   const [dragOver, setDragOver] = useState(false);
-  const [navigationProgress, setNavigationProgress] = useState<number | null>(
+  const [startedPath, setStartedPath] = useState<string | null>(null);
+	const [navigationProgress, setNavigationProgress] = useState<number | null>(
     null,
   );
 
   useEffect(() => {
-    if (navigationProgress === null) return;
-    setNavigationProgress(100);
+    if (navigationProgress === null || startedPath === pathname) return;
     const timer = window.setTimeout(() => setNavigationProgress(null), 220);
     return () => window.clearTimeout(timer);
-  }, [pathname]);
+  }, [pathname, startedPath, navigationProgress]);
 
   if (!link.href) {
     return <span className="flex-1" />;
@@ -116,7 +116,8 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
     )
       return;
     event.preventDefault();
-    setNavigationProgress(12);
+    setStartedPath(pathname);
+		setNavigationProgress(12);
     const timer = window.setInterval(() => {
       setNavigationProgress((current) =>
         current === null ? 12 : Math.min(90, current + 8),
@@ -128,8 +129,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
         preloadMailboxPage(link.href!, selectedMailbox?.id),
         waitForNavigationProgress(),
       ]);
-      setNavigationProgress(100);
-      await waitForNavigationProgress(160);
+        await waitForNavigationProgress(160);
       router.push(link.href!);
     } catch {
       setNavigationProgress(null);
@@ -172,7 +172,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
         <div className="fixed inset-x-0 top-0 z-[120] h-1 bg-blue-100">
           <div
             className="h-full bg-blue-600 transition-[width] duration-100 ease-out"
-            style={{ width: `${navigationProgress}%` }}
+            style={{ width: `${startedPath !== pathname ? 100 : navigationProgress}%` }}
           />
         </div>
       )}

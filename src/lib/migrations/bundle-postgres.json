@@ -262,6 +262,47 @@
         "CREATE TRIGGER mailbox_aliases_jmap_changed AFTER INSERT OR UPDATE OR DELETE ON mailbox_aliases\nFOR EACH ROW EXECUTE FUNCTION mailflare_aliases_changed();",
         "DO $$\nBEGIN\n\tCREATE EXTENSION IF NOT EXISTS pg_trgm;\n\tCREATE INDEX messages_subject_trgm_idx ON messages USING gin (lower(subject) gin_trgm_ops);\n\tCREATE INDEX messages_text_body_trgm_idx ON messages USING gin (lower(text_body) gin_trgm_ops);\nEXCEPTION WHEN OTHERS THEN\n\tRAISE NOTICE 'pg_trgm is unavailable; message search will scan with ILIKE instead (%).', SQLERRM;\nEND;\n$$;"
       ]
+    },
+    {
+      "name": "0002_plain_talon.sql",
+      "statements": [
+        "CREATE TABLE \"typewit_accounts\" (\n\t\"user_id\" text PRIMARY KEY NOT NULL,\n\t\"state\" text DEFAULT 'provisioning' NOT NULL\n);",
+        "CREATE TABLE \"typewit_forwarding\" (\n\t\"mailbox_id\" text PRIMARY KEY NOT NULL,\n\t\"destination\" text NOT NULL,\n\t\"enabled\" boolean DEFAULT false NOT NULL,\n\t\"verified_at\" bigint NOT NULL,\n\t\"updated_at\" bigint NOT NULL\n);",
+        "ALTER TABLE \"typewit_accounts\" ADD CONSTRAINT \"typewit_accounts_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+        "ALTER TABLE \"typewit_forwarding\" ADD CONSTRAINT \"typewit_forwarding_mailbox_id_mailboxes_id_fk\" FOREIGN KEY (\"mailbox_id\") REFERENCES \"public\".\"mailboxes\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+      ]
+    },
+    {
+      "name": "0003_hot_blazing_skull.sql",
+      "statements": [
+        "CREATE TABLE \"mailbox_address_claims\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"domain_id\" text NOT NULL,\n\t\"local_part\" text NOT NULL\n);",
+        "ALTER TABLE \"mailbox_address_claims\" ADD CONSTRAINT \"mailbox_address_claims_domain_id_domains_id_fk\" FOREIGN KEY (\"domain_id\") REFERENCES \"public\".\"domains\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+        "CREATE UNIQUE INDEX \"mailbox_address_claims_address_idx\" ON \"mailbox_address_claims\" USING btree (\"domain_id\",\"local_part\");",
+        "INSERT INTO mailbox_address_claims(id, domain_id, local_part) SELECT 'm:' || id, domain_id, lower(replace(split_part(local_part, '+', 1), '.', '')) FROM mailboxes;",
+        "CREATE FUNCTION mailboxes_claim_write() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  IF TG_OP <> 'INSERT' THEN\n    DELETE FROM mailbox_address_claims WHERE id = 'm:' || OLD.id;\n  END IF;\n  IF TG_OP <> 'DELETE' THEN\n    INSERT INTO mailbox_address_claims(id, domain_id, local_part)\n      VALUES ('m:' || NEW.id, NEW.domain_id, lower(replace(split_part(NEW.local_part, '+', 1), '.', '')));\n    RETURN NEW;\n  END IF;\n  RETURN OLD;\nEND;\n$$;",
+        "CREATE TRIGGER mailboxes_claim_write AFTER INSERT OR UPDATE OR DELETE ON mailboxes\nFOR EACH ROW EXECUTE FUNCTION mailboxes_claim_write();",
+        "INSERT INTO mailbox_address_claims(id, domain_id, local_part) SELECT 'a:' || id, domain_id, lower(replace(split_part(local_part, '+', 1), '.', '')) FROM mailbox_aliases;",
+        "CREATE FUNCTION mailbox_aliases_claim_write() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  IF TG_OP <> 'INSERT' THEN\n    DELETE FROM mailbox_address_claims WHERE id = 'a:' || OLD.id;\n  END IF;\n  IF TG_OP <> 'DELETE' THEN\n    INSERT INTO mailbox_address_claims(id, domain_id, local_part)\n      VALUES ('a:' || NEW.id, NEW.domain_id, lower(replace(split_part(NEW.local_part, '+', 1), '.', '')));\n    RETURN NEW;\n  END IF;\n  RETURN OLD;\nEND;\n$$;",
+        "CREATE TRIGGER mailbox_aliases_claim_write AFTER INSERT OR UPDATE OR DELETE ON mailbox_aliases\nFOR EACH ROW EXECUTE FUNCTION mailbox_aliases_claim_write();"
+      ]
+    },
+    {
+      "name": "0004_amazing_ultimo.sql",
+      "statements": [
+        "CREATE TABLE \"typewit_forwarding_attempts\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"mailbox_id\" text NOT NULL,\n\t\"state\" text NOT NULL,\n\t\"created_at\" bigint NOT NULL\n);",
+        "ALTER TABLE \"typewit_forwarding_attempts\" ADD CONSTRAINT \"typewit_forwarding_attempts_mailbox_id_mailboxes_id_fk\" FOREIGN KEY (\"mailbox_id\") REFERENCES \"public\".\"mailboxes\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+        "CREATE INDEX \"typewit_forwarding_attempts_mailbox_idx\" ON \"typewit_forwarding_attempts\" USING btree (\"mailbox_id\");"
+      ]
+    },
+    {
+      "name": "0005_claim_cascade_cleanup.sql",
+      "statements": [
+        "DELETE FROM mailbox_address_claims WHERE\n (id LIKE 'm:%' AND NOT EXISTS (SELECT 1 FROM mailboxes WHERE mailboxes.id = substr(mailbox_address_claims.id, 3))) OR\n (id LIKE 'a:%' AND NOT EXISTS (SELECT 1 FROM mailbox_aliases WHERE mailbox_aliases.id = substr(mailbox_address_claims.id, 3)));",
+        "CREATE FUNCTION mailboxes_claim_cascade_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  DELETE FROM mailbox_address_claims WHERE id IN (SELECT 'a:' || id FROM mailbox_aliases WHERE mailbox_id = OLD.id);\n  RETURN OLD;\nEND;\n$$;",
+        "CREATE TRIGGER mailboxes_claim_cascade_cleanup BEFORE DELETE ON mailboxes FOR EACH ROW EXECUTE FUNCTION mailboxes_claim_cascade_cleanup();",
+        "CREATE FUNCTION users_claim_cascade_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  DELETE FROM mailbox_address_claims WHERE id IN (SELECT 'm:' || id FROM mailboxes WHERE user_id = OLD.id) OR id IN (SELECT 'a:' || mailbox_aliases.id FROM mailbox_aliases INNER JOIN mailboxes ON mailboxes.id = mailbox_aliases.mailbox_id WHERE mailboxes.user_id = OLD.id);\n  RETURN OLD;\nEND;\n$$;",
+        "CREATE TRIGGER users_claim_cascade_cleanup BEFORE DELETE ON users FOR EACH ROW EXECUTE FUNCTION users_claim_cascade_cleanup();"
+      ]
     }
   ]
 }

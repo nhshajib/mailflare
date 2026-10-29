@@ -4,7 +4,6 @@ import type { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth/admin";
 import { requireUser } from "@/lib/auth/cookies";
-import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { getEnv } from "@/lib/cloudflare";
 
 type Db = ReturnType<typeof getDb>;
@@ -83,30 +82,18 @@ export function accountListItemFromUser(user: {
 	};
 }
 
-/** Admin session on an installation licensed for Team-only mailbox sharing. */
-export async function requireTeamSharingAdmin(request: Request) {
-	const access = await requireTeamAdmin(request);
-	if (access.error) return access;
-	if (!(await getLicenseEntitlements(access.env)).canShareMailboxes) {
-		return { ...access, error: NextResponse.json({ error: "A Team license is required to share inboxes" }, { status: 403 }) };
-	}
-	return access;
+/** Sharing administration still requires an authenticated administrator. */
+export async function requireSharingAdmin(request: Request) {
+  return requireAccountAdmin(request);
 }
 
-export async function requireTeamAdmin(request: Request) {
-	const env = getEnv();
-	try {
-		const user = await requireUser(env, request);
-		assertAdmin(user);
-		if (!(await getLicenseEntitlements(env)).canManageAccounts) {
-			return {
-				env,
-				user,
-				error: NextResponse.json({ error: "A Pro or Team license is required to manage accounts" }, { status: 403 }),
-			};
-		}
-		return { env, user, error: null };
-	} catch {
-		return { env, user: null, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-	}
+export async function requireAccountAdmin(request: Request) {
+  const env = getEnv();
+  try {
+    const user = await requireUser(env, request);
+    assertAdmin(user);
+    return { env, user, error: null };
+  } catch {
+    return { env, user: null, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
 }

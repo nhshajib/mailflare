@@ -5,7 +5,7 @@ import type { RefObject } from "react";
 
 export function useDismissible(open: boolean, onClose: () => void, container: RefObject<HTMLElement | null>) {
 	const close = useRef(onClose);
-	close.current = onClose;
+	useEffect(() => { close.current = onClose; }, [onClose]);
 
 	useEffect(() => {
 		if (!open) return;

@@ -15,6 +15,27 @@
       "when": 1792869793885,
       "tag": "0001_triggers_and_seeds",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1793195188256,
+      "tag": "0002_dry_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1793197407858,
+      "tag": "0003_dashing_sentry",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1793197573006,
+      "tag": "0004_demonic_molten_man",
+      "breakpoints": true
     }
   ]
 }

@@ -109,6 +109,35 @@ export const mailboxes = sqliteTable(
 	(t) => [uniqueIndex("mailboxes_address_idx").on(t.domainId, t.localPart), index("mailboxes_user_idx").on(t.userId)],
 );
 
+// Derived by triggers on every mailbox/alias write. The shared unique index
+// arbitrates concurrent claims even when callers use different API endpoints.
+export const mailboxAddressClaims = sqliteTable("mailbox_address_claims", {
+  id: text("id").primaryKey(),
+  domainId: text("domain_id").notNull().references(() => domains.id, { onDelete: "cascade" }),
+  localPart: text("local_part").notNull(),
+}, (t) => [uniqueIndex("mailbox_address_claims_address_idx").on(t.domainId, t.localPart)]);
+
+// Independently owned TypeWit state; does not alter upstream license settings.
+export const typewitAccounts = sqliteTable("typewit_accounts", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  state: text("state", { enum: ["provisioning", "ready", "cleanup_required"] }).notNull().default("provisioning"),
+});
+
+export const typewitForwardingAttempts = sqliteTable("typewit_forwarding_attempts", {
+  id: text("id").primaryKey(),
+  mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
+  state: text("state", { enum: ["pending", "delivered", "failed"] }).notNull(),
+  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
+}, (t) => [index("typewit_forwarding_attempts_mailbox_idx").on(t.mailboxId)]);
+
+export const typewitForwarding = sqliteTable("typewit_forwarding", {
+  mailboxId: text("mailbox_id").primaryKey().references(() => mailboxes.id, { onDelete: "cascade" }),
+  destination: text("destination").notNull(),
+  enabled: bool("enabled").notNull().default(false),
+  verifiedAt: timestamp("verified_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
+});
+
 export const mailboxAliases = sqliteTable(
 	"mailbox_aliases",
 	{
@@ -1118,6 +1147,10 @@ export const importJobs = sqliteTable("import_jobs", {
 }, (t) => [index("import_jobs_user_idx").on(t.userId, t.createdAt), index("import_jobs_status_idx").on(t.status, t.updatedAt)]);
 
 export const schema = {
+	typewitForwardingAttempts,
+	mailboxAddressClaims,
+	typewitAccounts,
+	typewitForwarding,
 	users,
 	domains,
 	mailboxes,

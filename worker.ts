@@ -1,3 +1,4 @@
+import { forwardTypewitMail } from "./src/lib/typewit/forwarding";
 import { withDatabase } from "./src/db/with-database";
 import { withStorage } from "./src/lib/storage";
 import vinextHandler from "vinext/server/fetch-handler";
@@ -84,12 +85,6 @@ export default {
 				if (forwarded && !decision.keepCopy) return;
 			}
 
-			if (message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
-				const forwardingDestination = await getAccountForwardingDestination(env, message.to);
-				if (forwardingDestination) {
-					await forwardMessage(message, forwardingDestination);
-				}
-			}
 			const rawR2Key = await storeRawToR2(env, message.from, message.to, raw);
 			const payload: InboundQueueMessage = {
 				from: message.from,
@@ -98,6 +93,15 @@ export default {
 				headers: Object.fromEntries(message.headers),
 			};
 			await env.INBOUND_QUEUE.send(payload);
+			// Persist and enqueue the local original before attempting optional forwarding.
+			const typewitForwarded = decision?.action !== "forward" && await forwardTypewitMail(env, message, raw);
+			if (!typewitForwarded && message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
+				const forwardingDestination = await getAccountForwardingDestination(env, message.to);
+				if (forwardingDestination) {
+					await forwardMessage(message, forwardingDestination);
+				}
+			}
+
 		} catch (err) {
 			console.error("Inbound enqueue failed", err);
 			message.setReject("Processing failed");

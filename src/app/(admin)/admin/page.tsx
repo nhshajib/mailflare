@@ -45,13 +45,6 @@ const sections: AdminSection[] = [
 		permission: "primary",
 	},
 	{
-		href: "/licenses",
-		titleKey: "admin.nav.licenses",
-		descriptionKey: "admin.section.licenses",
-		icon: BadgeDollarSign,
-		permission: "primary",
-	},
-	{
 		href: "/accounts",
 		titleKey: "admin.nav.accounts",
 		descriptionKey: "admin.section.accounts",

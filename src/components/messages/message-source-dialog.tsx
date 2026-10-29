@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Copy, Download, LoaderCircle } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
@@ -10,33 +12,17 @@ import { copyMessageSource, downloadMessageSource, fetchMessageSource, summarize
 
 export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSourceDialogProps) {
 	const { t } = useLanguage();
-	const [source, setSource] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [copied, setCopied] = useState(false);
-	const [copyError, setCopyError] = useState(false);
-	const summary = useMemo(() => source === null ? null : summarizeMessageSource(source), [source]);
-
-	useEffect(() => {
-		if (!open) return;
-		const controller = new AbortController();
-		setSource(null);
-		setError(null);
-		setCopied(false);
-		setCopyError(false);
-		setLoading(true);
-		fetchMessageSource(messageId, controller.signal)
-			.then((value) => {
-				if (!controller.signal.aborted) setSource(value);
-			})
-			.catch((reason) => {
-				if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : t("source.loadFailed"));
-			})
-			.finally(() => {
-				if (!controller.signal.aborted) setLoading(false);
-			});
-		return () => controller.abort();
-	}, [messageId, open]);
+	const [copied, setCopied] = useResettableState(`${messageId}:${open}`, false);
+	const [copyError, setCopyError] = useResettableState(`${messageId}:${open}`, false);
+  const query = useQuery({
+    queryKey: ["message-source", messageId, open],
+    queryFn: ({ signal }) => fetchMessageSource(messageId, signal),
+    enabled: open, gcTime: 0,
+  });
+  const source = open ? query.data ?? null : null;
+  const error = query.error ? (query.error instanceof Error ? query.error.message : t("source.loadFailed")) : null;
+  const loading = open && query.isPending;
+  const summary = useMemo(() => source === null ? null : summarizeMessageSource(source), [source]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

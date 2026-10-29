@@ -1,16 +1,12 @@
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useRef, useState } from "react";
 
 export function useMessageContentScroll(messageId: string, loading: boolean) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    setScrolled((scrollRef.current?.scrollTop ?? 0) > 0);
-  }, [messageId, loading]);
+  const [scrolled, setScrolled] = useResettableState(messageId, false);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    setScrolled(false);
   }, [messageId]);
 
   function handleScroll() {

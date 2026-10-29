@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bot } from "lucide-react";
@@ -29,10 +30,11 @@ export default function AdminAgentPage() {
 	const [cloudflareAvailable, setCloudflareAvailable] = useState(false);
 	const [hasSavedKey, setHasSavedKey] = useState(false);
 	const [savedEndpoint, setSavedEndpoint] = useState("");
-	const [models, setModels] = useState<AgentModelOption[]>([]);
-	const [modelSource, setModelSource] = useState<"catalog" | "suggested" | null>(null);
+	const modelKey = JSON.stringify([loaded, form.provider, form.preset, form.baseUrl, form.apiKey]);
+	const [models, setModels] = useResettableState<AgentModelOption[]>(modelKey, []);
+	const [modelSource, setModelSource] = useResettableState<"catalog" | "suggested" | null>(modelKey, null);
 	const [modelsLoading, setModelsLoading] = useState(false);
-	const [modelError, setModelError] = useState<string | null>(null);
+	const [requestModelError, setModelError] = useResettableState<string | null>(modelKey, null);
 	const [status, setStatus] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
@@ -51,14 +53,12 @@ export default function AdminAgentPage() {
 	}, [t]);
 
 	const canUseSavedKey = hasSavedKey && savedEndpoint === `${form.preset}|${form.baseUrl}`;
+	const modelError = form.provider === "compatible" && (!form.baseUrl || (!form.apiKey.trim() && !canUseSavedKey)) ? (form.preset === "custom" && !form.baseUrl ? t("agentAdmin.enterUrl") : t("agentAdmin.enterKey")) : requestModelError;
 	const selectedModelIds = parseAgentModelIds(form.model);
 	useEffect(() => {
 		if (!loaded) return;
-		setModels([]);
-		setModelSource(null);
-		setModelError(null);
 		if (form.provider === "compatible" && (!form.baseUrl || (!form.apiKey.trim() && !canUseSavedKey))) {
-			setModelError(form.preset === "custom" && !form.baseUrl ? t("agentAdmin.enterUrl") : t("agentAdmin.enterKey"));
+
 			return;
 		}
 		const controller = new AbortController();

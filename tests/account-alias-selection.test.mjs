@@ -232,28 +232,26 @@ for (const enabled of [true, false]) {
 	});
 }
 
-test("account creation still enforces admin authorization and the Team license", async (t) => {
-	const f = await fixture(t);
-	assert.equal((await f.post("api", {}, "invalid-test-key")).status, 401);
-	assert.equal((await f.post("dashboard", {}, "invalid-test-session")).status, 403);
-	f.database.db.exec("UPDATE license_settings SET state = 'inactive'");
-	assert.equal((await f.post("api")).status, 403);
-	assert.equal((await f.post("dashboard")).status, 403);
-	assert.equal(f.calls.length, 0);
+test("account creation keeps administrator, session and API-scope authorization without billing", async (t) => {
+  const f = await fixture(t);
+  assert.equal((await f.post("api", {}, "invalid-test-key")).status, 401);
+  assert.equal((await f.post("dashboard", {}, "invalid-test-session")).status, 403);
+  f.database.db.exec("UPDATE users SET role='user' WHERE id='admin'");
+  assert.equal((await f.post("api")).status, 401);
+  assert.equal((await f.post("dashboard")).status, 403);
+  f.database.db.exec("UPDATE users SET role='admin' WHERE id='admin'; UPDATE api_keys SET scopes='[\"mailboxes\"]'");
+  assert.equal((await f.post("api")).status, 401);
+  assert.equal(f.calls.length, 0, "unauthorized requests must not modify provider routing");
 });
 
-test("a Pro license creates accounts only while seats remain; Team and unlimited Pro have no limit", async (t) => {
-	const f = await fixture(t);
-	const users = () => f.database.db.prepare("SELECT count(*) AS count FROM users WHERE disabled = 0").get().count;
-	f.database.db.exec(`UPDATE license_settings SET plan = 'pro', seat_limit = ${users()}`);
-	assert.equal((await f.post("api")).status, 403, "no seat left");
-	f.database.db.exec(`UPDATE license_settings SET seat_limit = ${users() + 1}`);
-	assert.equal((await f.post("api", { username: "seat-one" })).status, 201);
-	assert.equal((await f.post("api", { username: "seat-two" })).status, 403, "seat just used");
-	f.database.db.exec("UPDATE license_settings SET seat_limit = NULL");
-	assert.equal((await f.post("api", { username: "seat-three" })).status, 201);
-	f.database.db.exec("UPDATE license_settings SET plan = 'team', seat_limit = 1");
-	assert.equal((await f.post("api", { username: "seat-four" })).status, 201);
+test("account creation has no paid seat limit or dependency on legacy activation data", async (t) => {
+  const f = await fixture(t);
+  f.database.db.exec("UPDATE license_settings SET plan='pro',state='expired',seat_limit=0");
+  assert.equal((await f.post("api", { username: "unlimited-one" })).status, 201);
+  assert.equal((await f.post("dashboard", { username: "unlimited-two" })).status, 201);
+  f.database.db.exec("DROP TABLE license_settings");
+  assert.equal((await f.post("api", { username: "no-billing-table" })).status, 201);
+  assert.equal((await f.post("dashboard", { username: "still-available" })).status, 201);
 });
 
 for (const separateDomains of [false, true]) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
@@ -16,17 +17,11 @@ import { getMailboxAddress, updateCurrentMailboxName } from "./utils";
 export function CurrentMailboxForm() {
 	const { t } = useLanguage();
 	const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
-	const [displayName, setDisplayName] = useState("");
-	const [savedDisplayName, setSavedDisplayName] = useState("");
-	const [status, setStatus] = useState<string | null>(null);
+	const [displayName, setDisplayName] = useResettableState(`${selectedMailbox?.id}:${selectedMailbox?.displayName}`, selectedMailbox?.displayName ?? "");
+	const [savedDisplayName, setSavedDisplayName] = useResettableState(`${selectedMailbox?.id}:${selectedMailbox?.displayName}`, selectedMailbox?.displayName ?? "");
+	const [status, setStatus] = useResettableState<string | null>(`${selectedMailbox?.id}:${selectedMailbox?.displayName}`, null);
 	const [saving, setSaving] = useState(false);
 
-	useEffect(() => {
-		const nextName = selectedMailbox?.displayName ?? "";
-		setDisplayName(nextName);
-		setSavedDisplayName(nextName);
-		setStatus(null);
-	}, [selectedMailbox?.id, selectedMailbox?.displayName]);
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();

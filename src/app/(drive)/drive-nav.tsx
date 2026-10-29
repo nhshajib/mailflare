@@ -1,5 +1,9 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
+import { readStorage } from "@/components/reorderable-list-utils";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -51,8 +55,8 @@ export function DriveNav({ onNavigate }: { onNavigate?: () => void }) {
 	const view = params.get("view") ?? "my";
 	const activeFolder = params.get("folder");
 	const [storage, setStorage] = useState<DriveStorageDetail | null>(null);
-	const [foldersOpen, setFoldersOpen] = useState(false);
-	const [folders, setFolders] = useState<FolderNode[]>([]);
+	const hydrated = useHydrated();
+	const [foldersOpen, setFoldersOpen] = useResettableState(hydrated, hydrated ? String(readStorage(FOLDERS_OPEN_KEY, 0)) === "1" : false);
 	const compact = minimal && !mobile;
 	const [creating, setCreating] = useState(false);
 	const [folderName, setFolderName] = useState("");
@@ -66,23 +70,17 @@ export function DriveNav({ onNavigate }: { onNavigate?: () => void }) {
 		return () => window.removeEventListener(DRIVE_STORAGE_EVENT, onStorage);
 	}, []);
 
-	useEffect(() => {
-		try { setFoldersOpen(localStorage.getItem(FOLDERS_OPEN_KEY) === "1"); } catch { /* storage unavailable */ }
-	}, []);
-
-	const loadFolders = useCallback(async () => {
-		try {
-			const response = await authFetch("/api/drive/folders", { redirectOnUnauthorized: false });
-			if (response.ok) setFolders((await response.json() as { folders: FolderNode[] }).folders);
-		} catch { /* the list stays as it was */ }
-	}, []);
-
-	useEffect(() => {
-		if (!foldersOpen) return;
-		void loadFolders();
-		window.addEventListener(DRIVE_FOLDERS_EVENT, loadFolders);
-		return () => window.removeEventListener(DRIVE_FOLDERS_EVENT, loadFolders);
-	}, [foldersOpen, loadFolders]);
+  const folderQuery = useQuery({ queryKey: ["drive-sidebar-folders"], enabled: foldersOpen, queryFn: async () => {
+    const response = await authFetch("/api/drive/folders", { redirectOnUnauthorized: false });
+    if (!response.ok) throw new Error("Unable to load folders");
+    return (await response.json() as { folders: FolderNode[] }).folders;
+  } });
+  const folders = folderQuery.data ?? [];
+  const loadFolders = useCallback(() => { void folderQuery.refetch(); }, [folderQuery.refetch]);
+  useEffect(() => {
+    window.addEventListener(DRIVE_FOLDERS_EVENT, loadFolders);
+    return () => window.removeEventListener(DRIVE_FOLDERS_EVENT, loadFolders);
+  }, [loadFolders]);
 
 	function toggleFolders() {
 		setFoldersOpen((open) => {

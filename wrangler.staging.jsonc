@@ -1,0 +1,49 @@
+// Independent TypeWit staging configuration. NEVER deploy with wrangler.jsonc.
+// No production D1/R2/Queue IDs, no production domain, no production credentials.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "typewit-mail-staging",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-05-20",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "vars": { "CF_EMAIL_WORKER_NAME": "typewit-mail-staging", "TYPEWIT_STAGING": "true", "TYPEWIT_FORWARDING_ENABLED": "false" },
+  "assets": { "binding": "ASSETS", "directory": "./dist/client", "not_found_handling": "none" },
+  "images": { "binding": "IMAGES" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "typewit-mail-staging" }],
+  "durable_objects": {
+    "bindings": [{ "name": "REALTIME", "class_name": "RealtimeHub" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }],
+  "triggers": { "crons": [] },
+  "ratelimits": [
+    { "name": "LOGIN_RATE_LIMIT", "namespace_id": "1101", "simple": { "limit": 20, "period": 60 } },
+    { "name": "DEVICE_LOGIN_RATE_LIMIT", "namespace_id": "1103", "simple": { "limit": 10, "period": 60 } },
+    { "name": "AGENT_RATE_LIMIT", "namespace_id": "1102", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "observability": { "enabled": true },
+  "ai": { "binding": "AI", "remote": true },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "typewit-mail-staging",
+    "database_id": "6b12d806-054a-4953-918b-a5eb67877f21",
+    "migrations_dir": "drizzle/migrations"
+  }],
+  "r2_buckets": [{
+    "binding": "BUCKET",
+    "bucket_name": "typewit-mail-staging-raw",
+    "preview_bucket_name": "typewit-mail-staging-raw"
+  }],
+  "queues": {
+    "producers": [
+      { "binding": "INBOUND_QUEUE", "queue": "typewit-mail-staging-inbound" },
+      { "binding": "OUTBOUND_QUEUE", "queue": "typewit-mail-staging-outbound" },
+      { "binding": "AGENT_QUEUE", "queue": "typewit-mail-staging-agent" }
+    ],
+    "consumers": [
+      { "queue": "typewit-mail-staging-inbound", "max_batch_size": 5, "max_retries": 3 },
+      { "queue": "typewit-mail-staging-outbound", "max_batch_size": 5, "max_retries": 3 },
+      { "queue": "typewit-mail-staging-agent", "max_batch_size": 1, "max_retries": 3 }
+    ]
+  }
+}

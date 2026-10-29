@@ -1,5 +1,7 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
@@ -14,15 +16,14 @@ const CANCEL_DISTANCE = 6;
 // it will land; nothing moves until you let go. Lists can hand items to each other through the
 // `before` row between them.
 export function ReorderableList({ lists, storageKey, enabled = true }: ReorderableListProps) {
-	const [stored, setStored] = useState<ReorderableLayout>({});
+	const hydrated = useHydrated();
+	const [stored, setStored] = useResettableState<ReorderableLayout>(`${storageKey}:${hydrated}`, hydrated ? readStorage<ReorderableLayout>(storageKey, {}) : {});
 	const [drag, setDrag] = useState<ReorderableDrag | null>(null);
 	const [target, setTarget] = useState<ReorderableDropTarget | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const hold = useRef<{ timer: number; x: number; y: number } | null>(null);
 	const suppressClick = useRef(false);
 	const latest = useRef({ layout: {} as ReorderableLayout, target: null as ReorderableDropTarget | null });
-
-	useEffect(() => { setStored(readStorage<ReorderableLayout>(storageKey, {})); }, [storageKey]);
 
 	const layout = resolveLayout(Object.fromEntries(lists.map((list) => [list.id, list.items.map((item) => item.id)])), stored);
 	const nodes = new Map(lists.flatMap((list) => list.items.map((item) => [item.id, item.node] as const)));

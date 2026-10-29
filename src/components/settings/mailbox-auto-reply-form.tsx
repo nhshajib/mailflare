@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -22,26 +23,13 @@ export function MailboxAutoReplyForm() {
   const { t } = useLanguage();
   const { selectedMailbox, setSelectedMailbox, isLoading } =
     useSelectedMailbox();
-  const [settings, setSettings] = useState(defaultSettings);
-  const [savedSettings, setSavedSettings] = useState(defaultSettings);
-  const [status, setStatus] = useState<string | null>(null);
+  const initialSettings = { enabled: selectedMailbox?.autoReplyEnabled ?? false, subject: selectedMailbox?.autoReplySubject ?? "Out of office", body: selectedMailbox?.autoReplyBody ?? "" };
+  const settingsKey = JSON.stringify([selectedMailbox?.id, initialSettings]);
+  const [settings, setSettings] = useResettableState(settingsKey, initialSettings);
+  const [savedSettings, setSavedSettings] = useResettableState(settingsKey, initialSettings);
+  const [status, setStatus] = useResettableState<string | null>(settingsKey, null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const nextSettings = {
-      enabled: selectedMailbox?.autoReplyEnabled ?? false,
-      subject: selectedMailbox?.autoReplySubject ?? "Out of office",
-      body: selectedMailbox?.autoReplyBody ?? "",
-    };
-    setSettings(nextSettings);
-    setSavedSettings(nextSettings);
-    setStatus(null);
-  }, [
-    selectedMailbox?.id,
-    selectedMailbox?.autoReplyEnabled,
-    selectedMailbox?.autoReplySubject,
-    selectedMailbox?.autoReplyBody,
-  ]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

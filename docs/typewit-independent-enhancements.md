@@ -1,0 +1,31 @@
+# TypeWit independently implemented enhancements
+
+This branch remains a **draft release candidate, not production-ready**. See [release checklist](typewit-release-checklist.md) and [staging gates](typewit-staging-release-gate.md).
+
+## Implemented
+
+- TypeWit identity constants, responsive account management, clear loading/empty/error states, and an authenticated account directory with cursor pagination.
+- Primary-admin-only account creation: regular users only, exact canonical address, one owned personal mailbox, bcrypt hashing, strict JSON/origin/body validation, atomic database creation and explicit provisioning state.
+- Active/disabled management applies only to regular accounts created by this endpoint. Primary/admin and incomplete-provisioning accounts cannot be enabled through it. Disabling revokes sessions/device keys; session resolution rejects disabled/deleted users.
+- Failure recovery restores provider rules before removing accounts. Uncertain cleanup retains a disabled account, returns its ID and writes an operational event without message content or credentials.
+- Independent forwarding configuration and UI. A destination must be verified by Cloudflare, belong to an external domain and be authorized by the primary administrator. A source must be a Cloudflare mailbox on an administrator-owned domain. Rules can be disabled without a working provider. Forwarding adds loop headers, skips previously forwarded/automatic mail and logs only event names/mailbox IDs. The raw original is persisted and queued before optional forwarding. Local copies are always retained. Provider rejection is recorded. Persistent reservations suppress duplicate source/destination/content attempts, including retries after uncertain provider outcomes. Cloudflare’s live `message.forward()` method cannot be replayed from a queue; the deliberate policy is at most one automatic provider attempt per byte-identical message/destination, with the original retained for manual recovery rather than unsafe blind retries.
+- Forwarding is **off unless `TYPEWIT_FORWARDING_ENABLED=true`** and remains off in staging. The live handler hook is inert by default. Node/relay provider adapters do not implement this TypeWit forwarding path yet. Do not advertise it as provider-independent or enable it before delivery acceptance.
+- Additive TypeWit account/forwarding tables and migrations for SQLite/D1, PostgreSQL and MySQL, with optional backup coverage and old-backup restoration tests. SQLite's historical snapshot is stale; its migration is deliberately hand-written instead of regenerating/removing unrelated tables.
+- Configurable email Worker routing target (default remains `mailflare`); staging explicitly targets its own Worker and blocks TypeWit account creation that would mutate Cloudflare routing.
+- Source and compiled staging binding checks reject additional databases, buckets, queue consumers/producers, service overrides, production identifiers and provider variables.
+
+## Licensing and feature availability
+
+`LICENSE` and upstream copyright notices remain intact. The checked-in code is covered by AGPLv3; no separately licensed implementation was imported for this change. This fork removes the local commercial activation system, paid feature checks, seat enforcement, upgrade indicators and purchase/activation APIs. It does not forge a Pro/Team status or call a vendor activation service. The retained `license_settings` table is historical backup data only, and no schema/data deletion is required.
+
+All bundled capabilities are available subject to their existing roles, API-key scopes, ownership and explicit sharing grants. Account management and shared inboxes still require an authorized administrator; changing branding still requires the primary administrator; forwarding settings belong to the authenticated owner. Disabled/deleted owners do not forward. Provider configuration, destination verification and loop guards are preserved.
+
+Network users must be offered corresponding source for the version served under AGPLv3 §13, including modifications and build/install instructions. The auth screen links to this repository; ensure every network user can access that source and publish the exact release commit. Removing an application's activation mechanism does not remove its copyright license or third-party service requirements.
+
+## Known limits that block release
+
+Remote staging resources/permissions and GitHub environment approval settings have not been verified in this session. Real delivery, production backup/version capture and remote rollback rehearsal remain outstanding. Chromium desktop/mobile tests verify actual login, visible/actionable account UI, form labels, keyboard focus, viewport bounds, mailbox-creation defaults and absence of client exceptions. This is targeted browser acceptance, not a complete accessibility certification. Repository-wide lint and TypeScript now pass; existing nonblocking lint warnings remain visible. React form/preference synchronization, fetch lifecycles, navigation, compose signatures and agent callback purity were repaired without weakening lint rules. A shared normalized address ledger now arbitrates writes from all mailbox/alias endpoints through a unique database index and triggers. Mailbox/user deletion cleanup covers MySQL foreign-key cascades that skip child triggers. Legacy collisions deliberately block migration; the read-only D1 preflight must return zero before rollout. Forwarding currently supports the live Cloudflare email event only, with durable attempt reservations and keep-copy failure handling instead of automatic re-forwarding of uncertain deliveries.
+
+## Browser and state lifecycle validation
+
+The shared `useResettableState` hook associates local edits with a stable entity/server-value key and resets before a different entity is committed. `useHydrated` keeps server and initial client markup consistent before reading browser preferences; theme state uses an external-store subscription. Tests exercise committed draft resets, functional setters, StrictMode and hydration without recoverable errors. Existing application tests remain enabled. Browser smoke checks wait for hydration, visible ancestors and a trial click so a loading overlay cannot count as a usable UI.

@@ -152,6 +152,10 @@ To add a language, create `public/locales/<code>.json` with the same keys as `sr
 - [Email assistant and MCP](docs/email-assistant-and-mcp.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
+## Included features
+
+This TypeWit fork includes account management without paid seat limits, shared inboxes, custom branding and email forwarding without software activation or a paid plan. Administrator roles, API-key scopes and mailbox ownership/sharing permissions are still required for protected operations. External mail-provider configuration is unchanged.
+
 ## License
 
 See [LICENSE](LICENSE).

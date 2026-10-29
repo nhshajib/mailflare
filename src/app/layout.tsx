@@ -8,6 +8,7 @@ import { getRequestLocale, loadServerMessages } from "@/lib/i18n/server";
 import { sidebarBootstrapScript } from "@/components/sidebar-state-utils";
 import { themeBootstrapScript } from "@/components/theme-utils";
 import { getHomeBranding } from "./home-server-utils";
+import { TYPEWIT_IDENTITY, typewitPageTitle } from "@/lib/typewit/identity";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,12 +23,12 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
 	return {
-		title: "TypeWit Mail",
+		title: typewitPageTitle(),
 		description: "TypeWit Mail — private email for the TypeWit team.",
-		icons: { icon: "/icon.png", apple: "/icon.png" },
+		icons: { icon: TYPEWIT_IDENTITY.iconPath, apple: TYPEWIT_IDENTITY.iconPath },
 		appleWebApp: {
 			capable: true,
-			title: "TypeWit Mail",
+			title: TYPEWIT_IDENTITY.productName,
 			statusBarStyle: "default",
 		},
 		robots: {

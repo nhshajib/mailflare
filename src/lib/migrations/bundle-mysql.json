@@ -241,6 +241,46 @@
         "CREATE TRIGGER mailbox_aliases_jmap_au AFTER UPDATE ON mailbox_aliases FOR EACH ROW\nBEGIN\n\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (NEW.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\n\tIF NOT (OLD.mailbox_id <=> NEW.mailbox_id) THEN\n\t\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (OLD.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\n\tEND IF;\nEND;",
         "CREATE TRIGGER mailbox_aliases_jmap_ad AFTER DELETE ON mailbox_aliases FOR EACH ROW\nBEGIN\n\tINSERT INTO jmap_mailbox_revisions (mailbox_id, revision) VALUES (OLD.mailbox_id, 1) ON DUPLICATE KEY UPDATE revision = revision + 1;\nEND;"
       ]
+    },
+    {
+      "name": "0002_dry_magma.sql",
+      "statements": [
+        "CREATE TABLE `typewit_accounts` (\n\t`user_id` varchar(191) NOT NULL,\n\t`state` varchar(64) NOT NULL DEFAULT 'provisioning',\n\tCONSTRAINT `typewit_accounts_user_id` PRIMARY KEY(`user_id`)\n);",
+        "CREATE TABLE `typewit_forwarding` (\n\t`mailbox_id` varchar(191) NOT NULL,\n\t`destination` longtext NOT NULL,\n\t`enabled` boolean NOT NULL DEFAULT false,\n\t`verified_at` bigint NOT NULL,\n\t`updated_at` bigint NOT NULL,\n\tCONSTRAINT `typewit_forwarding_mailbox_id` PRIMARY KEY(`mailbox_id`)\n);",
+        "ALTER TABLE `typewit_accounts` ADD CONSTRAINT `typewit_accounts_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+        "ALTER TABLE `typewit_forwarding` ADD CONSTRAINT `typewit_forwarding_mailbox_id_mailboxes_id_fk` FOREIGN KEY (`mailbox_id`) REFERENCES `mailboxes`(`id`) ON DELETE cascade ON UPDATE no action;"
+      ]
+    },
+    {
+      "name": "0003_dashing_sentry.sql",
+      "statements": [
+        "CREATE TABLE `mailbox_address_claims` (\n\t`id` varchar(191) NOT NULL,\n\t`domain_id` varchar(191) NOT NULL,\n\t`local_part` varchar(191) NOT NULL,\n\tCONSTRAINT `mailbox_address_claims_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `mailbox_address_claims_address_idx` UNIQUE(`domain_id`,`local_part`)\n);",
+        "ALTER TABLE `mailbox_address_claims` ADD CONSTRAINT `mailbox_address_claims_domain_id_domains_id_fk` FOREIGN KEY (`domain_id`) REFERENCES `domains`(`id`) ON DELETE cascade ON UPDATE no action;",
+        "INSERT INTO mailbox_address_claims(id, domain_id, local_part) SELECT CONCAT('m:', id), domain_id, lower(replace(substring_index(local_part, '+', 1), '.', '')) FROM mailboxes;",
+        "CREATE TRIGGER mailboxes_claim_insert AFTER INSERT ON mailboxes FOR EACH ROW BEGIN\n  INSERT INTO mailbox_address_claims(id, domain_id, local_part) VALUES (CONCAT('m:', NEW.id), NEW.domain_id, lower(replace(substring_index(NEW.local_part, '+', 1), '.', '')));\nEND;",
+        "CREATE TRIGGER mailboxes_claim_update AFTER UPDATE ON mailboxes FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id = CONCAT('m:', OLD.id);\n  INSERT INTO mailbox_address_claims(id, domain_id, local_part) VALUES (CONCAT('m:', NEW.id), NEW.domain_id, lower(replace(substring_index(NEW.local_part, '+', 1), '.', '')));\nEND;",
+        "CREATE TRIGGER mailboxes_claim_delete AFTER DELETE ON mailboxes FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id = CONCAT('m:', OLD.id);\nEND;",
+        "INSERT INTO mailbox_address_claims(id, domain_id, local_part) SELECT CONCAT('a:', id), domain_id, lower(replace(substring_index(local_part, '+', 1), '.', '')) FROM mailbox_aliases;",
+        "CREATE TRIGGER mailbox_aliases_claim_insert AFTER INSERT ON mailbox_aliases FOR EACH ROW BEGIN\n  INSERT INTO mailbox_address_claims(id, domain_id, local_part) VALUES (CONCAT('a:', NEW.id), NEW.domain_id, lower(replace(substring_index(NEW.local_part, '+', 1), '.', '')));\nEND;",
+        "CREATE TRIGGER mailbox_aliases_claim_update AFTER UPDATE ON mailbox_aliases FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id = CONCAT('a:', OLD.id);\n  INSERT INTO mailbox_address_claims(id, domain_id, local_part) VALUES (CONCAT('a:', NEW.id), NEW.domain_id, lower(replace(substring_index(NEW.local_part, '+', 1), '.', '')));\nEND;",
+        "CREATE TRIGGER mailbox_aliases_claim_delete AFTER DELETE ON mailbox_aliases FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id = CONCAT('a:', OLD.id);\nEND;"
+      ]
+    },
+    {
+      "name": "0004_demonic_molten_man.sql",
+      "statements": [
+        "CREATE TABLE `typewit_forwarding_attempts` (\n\t`id` varchar(191) NOT NULL,\n\t`mailbox_id` varchar(191) NOT NULL,\n\t`state` varchar(64) NOT NULL,\n\t`created_at` bigint NOT NULL,\n\tCONSTRAINT `typewit_forwarding_attempts_id` PRIMARY KEY(`id`)\n);",
+        "ALTER TABLE `typewit_forwarding_attempts` ADD CONSTRAINT `typewit_forwarding_attempts_mailbox_id_mailboxes_id_fk` FOREIGN KEY (`mailbox_id`) REFERENCES `mailboxes`(`id`) ON DELETE cascade ON UPDATE no action;",
+        "CREATE INDEX `typewit_forwarding_attempts_mailbox_idx` ON `typewit_forwarding_attempts` (`mailbox_id`);"
+      ]
+    },
+    {
+      "name": "0005_claim_cascade_cleanup.sql",
+      "statements": [
+        "DELETE FROM mailbox_address_claims WHERE\n (id LIKE 'm:%' AND NOT EXISTS (SELECT 1 FROM mailboxes WHERE mailboxes.id = substr(mailbox_address_claims.id, 3))) OR\n (id LIKE 'a:%' AND NOT EXISTS (SELECT 1 FROM mailbox_aliases WHERE mailbox_aliases.id = substr(mailbox_address_claims.id, 3)));",
+        "CREATE TRIGGER mailboxes_claim_cascade_cleanup BEFORE DELETE ON mailboxes FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id IN (SELECT CONCAT('a:', id) FROM mailbox_aliases WHERE mailbox_id = OLD.id);\nEND;",
+        "CREATE TRIGGER users_claim_cascade_cleanup BEFORE DELETE ON users FOR EACH ROW BEGIN\n  DELETE FROM mailbox_address_claims WHERE id IN (SELECT CONCAT('m:', id) FROM mailboxes WHERE user_id = OLD.id) OR id IN (SELECT CONCAT('a:', mailbox_aliases.id) FROM mailbox_aliases INNER JOIN mailboxes ON mailboxes.id = mailbox_aliases.mailbox_id WHERE mailboxes.user_id = OLD.id);\nEND;"
+      ]
     }
   ]
 }

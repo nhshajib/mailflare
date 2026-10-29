@@ -1,0 +1,74 @@
+name: TypeWit development checks
+on:
+  pull_request:
+  push:
+    branches: [main, feature/typewit-independent-enhancements]
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [types, lint, tests, audit, production-build, staging-build, local-worker, postgres]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run db:bundle
+      - name: TypeScript
+        if: matrix.check == 'types'
+        run: npx --no-install tsc --noEmit
+      - name: Lint (no baseline exclusions)
+        if: matrix.check == 'lint'
+        run: npm run lint
+      - name: Unit and local database/HTTP integration tests
+        if: matrix.check == 'tests'
+        run: node --test tests/*.test.mjs
+      - name: Audit production and development dependencies
+        if: matrix.check == 'audit'
+        run: npm audit --audit-level=high
+      - name: Production build without deployment
+        if: matrix.check == 'production-build'
+        run: npm run build
+      - name: Isolated staging build and artifact validation
+        if: matrix.check == 'staging-build'
+        env:
+          CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH: ./wrangler.staging.jsonc
+        run: |
+          node --test tests/typewit-staging-config.test.mjs
+          npm run build
+          node scripts/verify-typewit-staging-output.mjs
+      - name: Real isolated local Worker and D1 smoke test
+        if: matrix.check == 'local-worker'
+        env:
+          CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH: ./wrangler.staging.jsonc
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          npx --no-install wrangler d1 migrations apply DB --local --config wrangler.staging.jsonc
+          npx --no-install vp dev --port 3001 > /tmp/typewit-worker.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in {1..90}; do
+            if curl --fail --silent http://localhost:3001/api/setup/status > /dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then cat /tmp/typewit-worker.log; exit 1; fi
+          node scripts/typewit-local-smoke.mjs --browser
+      - name: PostgreSQL migrations, claims, query shapes and backup restoration
+        if: matrix.check == 'postgres'
+        env:
+          MAILFLARE_DB_DIALECT: postgres
+        run: npm run db:smoke -- pglite://memory
+      - name: Confirm generated tracked bundles are current
+        run: git diff --exit-code -- src/lib/migrations/bundle.json src/lib/migrations/bundle-postgres.json src/lib/migrations/bundle-mysql.json

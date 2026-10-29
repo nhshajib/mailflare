@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, CheckCircle2, LoaderCircle, MailPlus, XCircle } from "lucide-react";
@@ -41,11 +42,13 @@ export function RegisterClient() {
   const [checks, setChecks] = useState<SetupRequirementCheck[]>([]);
   const [databaseMigrated, setDatabaseMigrated] = useState(false);
   const [preparationComplete, setPreparationComplete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mxChecking, setMxChecking] = useState(true);
-  const [mxRecordsExist, setMxRecordsExist] = useState<boolean | null>(null);
-  const [replaceMxRecords, setReplaceMxRecords] = useState(false);
   const [mxCheckRevision, setMxCheckRevision] = useState(0);
+  const accountDomain = setupDomain ?? primaryDomain;
+  const mxKey = `${step}:${accountDomain}:${setupSkipDns}:${mxCheckRevision}`;
+  const [error, setError] = useState<string | null>(null);
+  const [mxChecking, setMxChecking] = useResettableState(mxKey, !setupSkipDns);
+  const [mxRecordsExist, setMxRecordsExist] = useResettableState<boolean | null>(mxKey, setupSkipDns ? false : null);
+  const [replaceMxRecords, setReplaceMxRecords] = useResettableState(mxKey, false);
   const [loading, setLoading] = useState(false);
   const [turnstileReset, setTurnstileReset] = useState(0);
 
@@ -53,24 +56,14 @@ export function RegisterClient() {
     void runPreparation();
   }, []);
 
-  const accountDomain = setupDomain ?? primaryDomain;
-
   useEffect(() => {
     if (step !== 3 || !accountDomain) return;
     if (setupSkipDns) {
       // DNS is skipped, so there is nothing on the zone to check.
-      setMxChecking(false);
-      setMxRecordsExist(false);
-      setReplaceMxRecords(false);
-      setError(null);
       return;
     }
 
     let active = true;
-    setMxChecking(true);
-    setMxRecordsExist(null);
-    setReplaceMxRecords(false);
-    setError(null);
 
     void checkExistingMx(accountDomain)
       .then(({ ok, data }) => {

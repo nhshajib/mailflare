@@ -1,5 +1,6 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
@@ -9,9 +10,9 @@ import type { McpAgentInstructionsProps } from "./mcp-agent-instructions-types";
 
 export function McpAgentInstructions(props: McpAgentInstructionsProps) {
 	const { t } = useLanguage();
-	const [origin, setOrigin] = useState("");
+	const hydrated = useHydrated();
+	const origin = hydrated ? window.location.origin : "";
 	const [copied, setCopied] = useState(false);
-	useEffect(() => setOrigin(window.location.origin), []);
 	const prompt = buildMcpAgentPrompt(origin, props);
 
 	return <div className="space-y-2 rounded-lg border border-neutral-200 p-3">

@@ -1,21 +1,18 @@
 "use client";
 
+import { useHydrated } from "@/hooks/use-hydrated";
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { fetchCurrentUser } from "@/hooks/use-current-user";
 import { readInitialAssistantPanelState, saveAssistantPanelState } from "./dashboard-state-utils";
 
 export function useDashboardState() {
-	const [assistantOpen, setAssistantOpen] = useState(false);
-	const [assistantFullSize, setAssistantFullSize] = useState(false);
-	const [panelRestored, setPanelRestored] = useState(false);
+	const hydrated = useHydrated();
+	const initial = hydrated ? readInitialAssistantPanelState() : { open: false, fullSize: false };
+	const [assistantOpen, setAssistantOpen] = useResettableState(hydrated, initial.open);
+	const [assistantFullSize, setAssistantFullSize] = useResettableState(hydrated, initial.fullSize);
+	const panelRestored = hydrated;
 	const [storagePrefix, setStoragePrefix] = useState<string | null>(null);
-
-	useLayoutEffect(() => {
-		const saved = readInitialAssistantPanelState();
-		setAssistantOpen(saved.open);
-		setAssistantFullSize(saved.fullSize);
-		setPanelRestored(true);
-	}, []);
 
 	useEffect(() => {
 		let cancelled = false;

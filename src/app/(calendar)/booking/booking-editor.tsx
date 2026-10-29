@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import { CalendarDays, ChevronDown, Clock3, MapPin, MoreHorizontal, Plus, Trash2, UserRound } from "lucide-react";
 import clsx from "clsx";
@@ -18,12 +19,11 @@ import { BookingHostAvatar } from "./booking-host-avatar";
 
 export function BookingEditor({ form, open, editingId, username, hosts, canManageHosts, currentUserId, saving, onChange, onClose, onSave, onDelete, onToggleEnabled, onClosed }: BookingEditorProps) {
 	const { t } = useLanguage();
-	const [activeSection, setActiveSection] = useState<BookingEditorSection>(null);
-	const [nameEditing, setNameEditing] = useState(false);
-	const [moreOpen, setMoreOpen] = useState(false);
-	const [hostQuery, setHostQuery] = useState("");
-	const [hostError, setHostError] = useState("");
-	useEffect(() => { if (open) { setActiveSection(null); setNameEditing(false); setMoreOpen(false); setHostQuery(""); setHostError(""); } }, [editingId, open]);
+	const [activeSection, setActiveSection] = useResettableState<BookingEditorSection>(`${editingId}:${open}`, null);
+	const [nameEditing, setNameEditing] = useResettableState(`${editingId}:${open}`, false);
+	const [moreOpen, setMoreOpen] = useResettableState(`${editingId}:${open}`, false);
+	const [hostQuery, setHostQuery] = useResettableState(`${editingId}:${open}`, "");
+	const [hostError, setHostError] = useResettableState(`${editingId}:${open}`, "");
 	const sectionClass = "border-b border-neutral-200 px-5 py-5";
 	const headingClass = "flex w-full items-center justify-between gap-3 text-left text-base font-semibold text-neutral-900";
 	const fieldClass = "h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm";

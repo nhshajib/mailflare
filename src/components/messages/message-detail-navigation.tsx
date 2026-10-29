@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
@@ -10,7 +10,7 @@ import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { authFetch } from "@/lib/auth/client";
 import type { MessageNavigationResponse } from "@/app/api/messages/navigation/types";
 import type { MessageDetailNavigationContextValue, MessageDetailNavigationProps, MessageDetailNavigationProviderProps, MessageDetailNavigationSnapshot, OpenedUnreadMessages } from "./message-detail-navigation-types";
-import { getMessageDetailNavigationState, takeOpenedUnreadMessage } from "./message-detail-navigation-utils";
+import { getMessageDetailNavigationState, readOpenedUnreadMessage, subscribeOpenedUnreadMessage } from "./message-detail-navigation-utils";
 import { useConversationView } from "./use-conversation-view";
 
 const NavigationContext = createContext<MessageDetailNavigationContextValue | null>(null);
@@ -31,10 +31,7 @@ export function MessageDetailNavigationProvider({ children, config }: MessageDet
 		});
 	}, [key]);
 
-	useEffect(() => {
-		const messageId = takeOpenedUnreadMessage();
-		if (messageId) recordUnread(messageId);
-	}, [recordUnread]);
+	const rememberedUnread = useSyncExternalStore(subscribeOpenedUnreadMessage, readOpenedUnreadMessage, () => null);
 
 	useEffect(() => {
 		if (mailboxesLoading) return;
@@ -59,7 +56,7 @@ export function MessageDetailNavigationProvider({ children, config }: MessageDet
 
 	const unreadIds = openedUnread.key === key ? openedUnread.ids : null;
 	const entries = snapshot.key === key
-		? snapshot.entries.map((entry) => ({ ...entry, unread: entry.unread || !!unreadIds?.has(entry.id) }))
+		? snapshot.entries.map((entry) => ({ ...entry, unread: entry.unread || entry.id === rememberedUnread || !!unreadIds?.has(entry.id) }))
 		: [];
 	return <NavigationContext.Provider value={{ entries, hrefPrefix: config.hrefPrefix, recordUnread }}>{children}</NavigationContext.Provider>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { CONTACT_AVATAR_CHANGED_EVENT } from "@/lib/contacts/avatar-client";
@@ -20,17 +21,9 @@ export function ContactAvatar({
 	managedAvatarUrl,
 	className,
 }: ContactAvatarProps) {
-	const [managedAvatar, setManagedAvatar] = useState(hasManagedAvatar);
-	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-	const [imageFailed, setImageFailed] = useState(false);
-	const [avatarVersion, setAvatarVersion] = useState(0);
-
-	useEffect(() => {
-		setManagedAvatar(hasManagedAvatar);
-		setAvatarUrl(null);
-		setImageFailed(false);
-		setAvatarVersion(0);
-	}, [address, hasManagedAvatar, mailboxId, managedAvatarUrl]);
+	const avatarKey = JSON.stringify([address, hasManagedAvatar, mailboxId, managedAvatarUrl]);
+	const [managedAvatar, setManagedAvatar] = useResettableState(avatarKey, hasManagedAvatar);
+	const [avatarVersion, setAvatarVersion] = useResettableState(avatarKey, 0);
 
 	useEffect(() => {
 		function onAvatarChanged(event: Event) {
@@ -45,18 +38,8 @@ export function ContactAvatar({
 		return () => window.removeEventListener(CONTACT_AVATAR_CHANGED_EVENT, onAvatarChanged);
 	}, [address]);
 
-	useEffect(() => {
-		setImageFailed(false);
-		if (managedAvatarUrl) {
-			setAvatarUrl(managedAvatarUrl);
-			return;
-		}
-		if (managedAvatar && mailboxId) {
-			setAvatarUrl(getManagedContactAvatarUrl(mailboxId, address, avatarVersion));
-			return;
-		}
-		setAvatarUrl(null);
-	}, [address, avatarVersion, mailboxId, managedAvatar, managedAvatarUrl]);
+	const avatarUrl = managedAvatarUrl || (managedAvatar && mailboxId ? getManagedContactAvatarUrl(mailboxId, address, avatarVersion) : null);
+	const [imageFailed, setImageFailed] = useResettableState(avatarUrl, false);
 
 	return (
 		<span

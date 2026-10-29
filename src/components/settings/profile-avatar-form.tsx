@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useRef, useState } from "react";
 import { Camera, LoaderCircle, User } from "lucide-react";
 import { authFetch } from "@/lib/auth/client";
@@ -29,28 +30,24 @@ export function ProfileAvatarForm({
 }: ProfileAvatarFormProps) {
 	const { t } = useLanguage();
 	const name = nameProp ?? t("avatar.profile");
-	const [hasAvatar, setHasAvatar] = useState(initialHasAvatar);
-	const [avatarUrl, setAvatarUrl] = useState(
-		mailboxId ? `/api/mailboxes/${mailboxId}/avatar` : "/api/profile/avatar",
-	);
+	const [hasAvatar, setHasAvatar] = useResettableState(`${mailboxId}:${initialHasAvatar}`, initialHasAvatar);
+	const [avatarUrl, setAvatarUrl] = useResettableState(`${mailboxId}:${initialHasAvatar}`, mailboxId ? `/api/mailboxes/${mailboxId}/avatar` : "/api/profile/avatar");
 	const [status, setStatus] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		if (mailboxId) {
-			setHasAvatar(initialHasAvatar);
-			setAvatarUrl(`/api/mailboxes/${mailboxId}/avatar`);
-			return;
-		}
+		if (mailboxId) return;
+		let cancelled = false;
 
 		authFetch("/api/auth/me", { redirectOnUnauthorized: false })
 			.then((response) => (response.ok ? response.json() : null))
 			.then((data) => {
 				const authData = data as ProfileAvatarSessionResponse | null;
-				setHasAvatar(!!authData?.user?.hasAvatar);
+				if (!cancelled) setHasAvatar(!!authData?.user?.hasAvatar);
 			})
-			.catch(() => setHasAvatar(false));
+			.catch(() => { if (!cancelled) setHasAvatar(false); });
+		return () => { cancelled = true; };
 	}, [initialHasAvatar, mailboxId]);
 
 	async function onPick(event: React.ChangeEvent<HTMLInputElement>) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useResettableState } from "@/hooks/use-resettable-state";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { BellRing, ChevronUp, Eye, EyeOff, FileText, Forward, Maximize2, Minimize2, Minus, Paperclip, Reply, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -65,7 +66,11 @@ export function ComposeForm({
 	const [threading, setThreading] = useState<ComposeThreading | null>(null);
 	const [subject, setSubject] = useState("");
 	// The body is HTML; quoted/forwarded content is kept aside and folded.
-	const [html, setHtml] = useState("");
+	const [bodyState, setBodyState] = useState({ html: "", signature: "" });
+  const html = bodyState.html;
+  const setHtml = useCallback((update: React.SetStateAction<string>) => {
+    setBodyState(current => ({ ...current, html: typeof update === "function" ? update(current.html) : update }));
+  }, []);
 	const [quotedHtml, setQuotedHtml] = useState<string | null>(null);
 	const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
 	// Attachments the draft already holds server-side (a forwarded message's files).
@@ -76,14 +81,14 @@ export function ComposeForm({
 	const [minimized, setMinimized] = useState(false);
 	const [toast, setToast] = useState<Toast>(null);
 	const [loading, setLoading] = useState(false);
-	const [loadingDraft, setLoadingDraft] = useState(false);
+	const [loadingDraft, setLoadingDraft] = useResettableState(draftIdToLoad, !!draftIdToLoad);
 	const [deletingDraft, setDeletingDraft] = useState(false);
 	const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
 	const [trackOpens, setTrackOpens] = useTrackOpens();
 	const [followUpDays, setFollowUpDays] = useState<number | null>(null);
 	const [loadedDraftMailboxId, setLoadedDraftMailboxId] = useState<string | null>(null);
 	const [loadedDraftFrom, setLoadedDraftFrom] = useState<string | null>(null);
-	const [selectedFrom, setSelectedFrom] = useState("");
+	const [chosenFrom, setSelectedFrom] = useState("");
 	const formRef = useRef<HTMLFormElement>(null);
 	useSheetViewport(formRef, mode === "popup");
 	const isPhone = useIsMobile();
@@ -127,7 +132,7 @@ export function ComposeForm({
 	const rejectedFiles = useRef(new WeakSet<File>());
 	const attachmentInput = useRef<HTMLInputElement | null>(null);
 	const fileDragDepth = useRef(0);
-	const previousSignature = useRef("");
+
 
 	useEffect(() => {
 		if (!selectedMailbox && mailboxes.length === 1) setSelectedMailbox(mailboxes[0]);
@@ -156,17 +161,10 @@ export function ComposeForm({
 		}),
 		[mailboxes],
 	);
+	const selectedFrom = senderAddresses.includes(chosenFrom) ? chosenFrom : loadedDraftFrom && senderAddresses.includes(loadedDraftFrom) ? loadedDraftFrom : senderAddresses[0] ?? "";
 	const fromAddr = selectedMailbox && selectedFrom
 		? formatEmailAddress(selectedFrom, selectedMailbox.displayName)
 		: "";
-
-	useEffect(() => {
-		if (!senderAddresses.length) {
-			setSelectedFrom("");
-			return;
-		}
-		if (!senderAddresses.includes(selectedFrom)) setSelectedFrom(senderAddresses[0]);
-	}, [selectedFrom, senderAddresses]);
 
 	useEffect(() => {
 		if (!toast) return;
@@ -178,7 +176,6 @@ export function ComposeForm({
 		if (!draftIdToLoad) return;
 
 		let cancelled = false;
-		setLoadingDraft(true);
 		fetchDraft(draftIdToLoad)
 			.then((draft) => {
 				if (cancelled) return;
@@ -233,17 +230,10 @@ export function ComposeForm({
 		if (draftMailbox) setSelectedMailbox(draftMailbox);
 	}, [loadedDraftMailboxId, mailboxes, selectedMailbox?.id, setSelectedMailbox]);
 
-	useEffect(() => {
-		if (!loadedDraftFrom || !senderAddresses.includes(loadedDraftFrom)) return;
-		setSelectedFrom(loadedDraftFrom);
-	}, [loadedDraftFrom, senderAddresses]);
-
-	useEffect(() => {
-		if (loadingDraft) return;
-		const nextSignature = selectedMailbox?.signature ?? "";
-		setHtml((current) => applyMailboxSignatureHtml(current, previousSignature.current, nextSignature));
-		previousSignature.current = nextSignature;
-	}, [loadingDraft, selectedMailbox?.id, selectedMailbox?.signature]);
+  const nextSignature = selectedMailbox?.signature ?? "";
+  if (!loadingDraft && bodyState.signature !== nextSignature) {
+    setBodyState({ html: applyMailboxSignatureHtml(bodyState.html, bodyState.signature, nextSignature), signature: nextSignature });
+  }
 
 	useEffect(() => () => {
 		void pendingSave.current?.();

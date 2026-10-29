@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
@@ -13,23 +14,15 @@ type SkippedDomain = { id: string; hostname: string; dnsSkipped?: boolean };
 export function DnsSkippedBanner() {
 	const { t } = useLanguage();
 	const user = useCurrentUser();
-	const [domains, setDomains] = useState<SkippedDomain[]>([]);
 	const [busy, setBusy] = useState(false);
-
-	const load = useCallback(async () => {
-		try {
-			const res = await authFetch("/api/domains", { redirectOnUnauthorized: false });
-			if (!res.ok) return;
-			const data = (await res.json()) as { domains?: SkippedDomain[] };
-			setDomains((data.domains ?? []).filter((domain) => domain.dnsSkipped));
-		} catch {
-			// The banner is advisory; a failed read just hides it.
-		}
-	}, []);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
+  const query = useQuery({ queryKey: ["dns-skipped-domains", user?.id], enabled: !!user, queryFn: async () => {
+    const response = await authFetch("/api/domains", { redirectOnUnauthorized: false });
+    if (!response.ok) return [] as SkippedDomain[];
+    const data = await response.json() as { domains?: SkippedDomain[] };
+    return (data.domains ?? []).filter(domain => domain.dnsSkipped);
+  } });
+  const domains = query.data ?? [];
+  const load = () => query.refetch();
 
 	if (domains.length === 0) return null;
 	const canManage = !!user && (user.isPrimaryAdmin || (user.role === "admin" && user.canManageDomains));

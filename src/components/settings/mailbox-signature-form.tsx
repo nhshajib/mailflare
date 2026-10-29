@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -13,17 +14,11 @@ import { updateMailboxSignature } from "./utils";
 export function MailboxSignatureForm() {
 	const { t } = useLanguage();
 	const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
-	const [signature, setSignature] = useState("");
-	const [savedSignature, setSavedSignature] = useState("");
-	const [status, setStatus] = useState<string | null>(null);
+	const [signature, setSignature] = useResettableState(`${selectedMailbox?.id}:${selectedMailbox?.signature}`, selectedMailbox?.signature ?? "");
+	const [savedSignature, setSavedSignature] = useResettableState(`${selectedMailbox?.id}:${selectedMailbox?.signature}`, selectedMailbox?.signature ?? "");
+	const [status, setStatus] = useResettableState<string | null>(`${selectedMailbox?.id}:${selectedMailbox?.signature}`, null);
 	const [saving, setSaving] = useState(false);
 
-	useEffect(() => {
-		const nextSignature = selectedMailbox?.signature ?? "";
-		setSignature(nextSignature);
-		setSavedSignature(nextSignature);
-		setStatus(null);
-	}, [selectedMailbox?.id, selectedMailbox?.signature]);
 
 	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();

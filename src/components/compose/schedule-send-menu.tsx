@@ -1,5 +1,6 @@
 "use client";
 
+import { useNow } from "@/hooks/use-now";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
@@ -20,6 +21,7 @@ import { getUserTimeZone } from "@/lib/time/utils";
 
 export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, onApplyTemplate }: ScheduleSendMenuProps) {
 	const { t } = useLanguage();
+	const now = useNow();
 	const [newTemplateOpen, setNewTemplateOpen] = useState(false);
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const isPhone = useIsMobile();
@@ -97,7 +99,7 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 					</DropdownMenu.Label>
 					<input
 						type="datetime-local"
-						min={formatDateTimeLocal(new Date())}
+						min={formatDateTimeLocal(new Date(now))}
 						value={pickedText ?? (value ? formatDateTimeLocal(value) : "")}
 						onChange={(event) => pick(event.target.value)}
 						onKeyDown={(event) => event.stopPropagation()}

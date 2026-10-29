@@ -1,4 +1,7 @@
 interface CloudflareEnv {
+	CF_EMAIL_WORKER_NAME?: string;
+	TYPEWIT_FORWARDING_ENABLED?: string;
+	TYPEWIT_STAGING?: string;
 	DB: D1Database;
 	/** Connection string for an external database (PostgreSQL, MySQL, libSQL, ...); unset keeps D1. See docs/databases.md. */
 	DATABASE_URL?: string;

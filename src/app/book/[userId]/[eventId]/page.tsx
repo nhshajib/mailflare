@@ -1,5 +1,6 @@
 "use client";
 
+import { useNow } from "@/hooks/use-now";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -51,8 +52,9 @@ export default function PublicBookingEventPage() {
 		return grouped;
 	}, [slots, timeZone]);
 	const availableDates = [...slotsByDate.keys()].sort();
-	const todayDate = localDateForSlot({ startsAt: new Date().toISOString(), endsAt: "", localDate: "", time: "" }, timeZone);
-	const visibleMonth = month || localDateForSlot({ startsAt: new Date().toISOString(), endsAt: "", localDate: "", time: "" }, timeZone).slice(0, 7);
+	const now = useNow();
+	const todayDate = localDateForSlot({ startsAt: new Date(now).toISOString(), endsAt: "", localDate: "", time: "" }, timeZone);
+	const visibleMonth = month || localDateForSlot({ startsAt: new Date(now).toISOString(), endsAt: "", localDate: "", time: "" }, timeZone).slice(0, 7);
 	const firstMonth = availableDates[0]?.slice(0, 7);
 	const lastMonth = availableDates.at(-1)?.slice(0, 7);
 	const timeZones = useMemo(() => event ? bookingTimeZones(event.timeZone, timeZone) : [], [event, timeZone]);

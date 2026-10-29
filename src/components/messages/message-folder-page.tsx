@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
@@ -66,12 +67,9 @@ function MessageListRow({
 }: MessageListRowProps) {
 	const { t } = useLanguage();
 	const Icon = config.icon;
-	const [read, setRead] = useState(message.read);
-	const [threadUnread, setThreadUnread] = useState(message.threadUnread);
-	const [starred, setStarred] = useState(message.starred);
-	useEffect(() => setRead(message.read), [message.read]);
-	useEffect(() => setThreadUnread(message.threadUnread), [message.threadUnread]);
-	useEffect(() => setStarred(message.starred), [message.starred]);
+	const [read, setRead] = useResettableState(message.read, message.read);
+	const [threadUnread, setThreadUnread] = useResettableState(message.threadUnread, message.threadUnread);
+	const [starred, setStarred] = useResettableState(message.starred, message.starred);
 	const rowMessage = { ...message, read, starred, threadUnread };
 	const unread = isMessageListRowUnread(rowMessage);
 	const draggable = config.folder === "inbox" && message.direction === "inbound";
@@ -308,16 +306,15 @@ export function MessageFolderPage({
 	const { selectedMailbox, isLoading: mailboxesLoading } = useSelectedMailbox();
 	const { query } = useMailSearch();
 	const isMobile = useIsMobile();
-	const [offset, setOffset] = useState(0);
-	const [internalSelectedMessages, setInternalSelectedMessages] = useState<
-		Array<{ id: string; read: boolean }>
-	>([]);
 	const [pendingBulkAction, setPendingBulkAction] = useState(false);
 	const [emptyingFolder, setEmptyingFolder] = useState(false);
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [unreadOnly, setUnreadOnly] = useState(false);
 	const [conversationView] = useConversationView();
 	const grouped = conversationView && config.folder !== "drafts";
+  const filterKey = JSON.stringify([query, selectedMailbox?.id, config.folder, config.folderId, unreadOnly, grouped]);
+  const [offset, setOffset] = useResettableState(filterKey, 0);
+  const [internalSelectedMessages, setInternalSelectedMessages] = useResettableState<Array<{ id: string; read: boolean }>>(`${filterKey}:${offset}`, []);
 	const { messages, isLoading, total, limit, updateMessages } = useMessages(config.folder, selectedMailbox?.id, {
 		query,
 		limit: pageSize,
@@ -337,7 +334,7 @@ export function MessageFolderPage({
 	const mailboxAddress = getMailboxAddress(selectedMailbox);
 	const currentAccountName = selectedMailbox?.displayName ?? selectedMailbox?.localPart;
 	const pageRange = getPageRange(offset, messages.length, total);
-	const selectedMessages = selection?.selectedMessages ?? internalSelectedMessages;
+	const selectedMessages = (selection?.selectedMessages ?? internalSelectedMessages).filter(item => isLoading || messages.some(message => message.id === item.id));
 	const setSelectedMessages =
 		selection?.setSelectedMessages ?? setInternalSelectedMessages;
 	const selectedIds = useMemo(
@@ -351,15 +348,6 @@ export function MessageFolderPage({
 	const rowMessageIds = (message: Message) => message.threadMessageIds ?? [message.id];
 	const expandSelectedIds = (ids: string[]) =>
 		ids.flatMap((id) => rowMessageIds(messages.find((message) => message.id === id) ?? { id } as Message));
-
-	useEffect(() => {
-		setOffset(0);
-		setSelectedMessages([]);
-	}, [query, selectedMailbox?.id, config.folder, config.folderId, unreadOnly, grouped]);
-
-	useEffect(() => {
-		setSelectedMessages([]);
-	}, [offset]);
 
 	useEffect(() => {
 		const originalTitle = document.title;
@@ -379,18 +367,10 @@ export function MessageFolderPage({
 		});
 	}, [title, config.folder, config.folderId, mailboxAddress, mailboxesLoading, titleTotal, titleUnread]);
 
-	useEffect(() => {
-		if (isLoading) return;
-		setSelectedMessages((current) => {
-			const remaining = current.filter((item) => messages.some((message) => message.id === item.id));
-			return remaining.length === current.length ? current : remaining;
-		});
-	}, [messages, isLoading]);
-
-	useEffect(() => {
-		if (isLoading || offset === 0 || messages.length > 0) return;
-		setOffset(total > 0 ? Math.floor((total - 1) / limit) * limit : 0);
-	}, [isLoading, offset, messages.length, total, limit]);
+  if (!isLoading && offset > 0 && messages.length === 0) {
+    const lastOffset = total > 0 ? Math.floor((total - 1) / limit) * limit : 0;
+    if (lastOffset !== offset) setOffset(lastOffset);
+  }
 
 	function updateSelectedMessage(messageId: string, selected: boolean) {
 		const message = messages.find((item) => item.id === messageId);
@@ -526,7 +506,7 @@ export function MessageFolderPage({
 								variant="ghost"
 								size="sm"
 								disabled={offset === 0 || isLoading}
-								onClick={() => setOffset(Math.max(offset - limit, 0))}
+								onClick={() => { setSelectedMessages([]); setOffset(Math.max(offset - limit, 0)); }}
 								aria-label={t("list.previousPage")}
 							>
 								<ChevronLeft className="h-4 w-4" />
@@ -537,7 +517,7 @@ export function MessageFolderPage({
 								variant="ghost"
 								size="sm"
 								disabled={offset + messages.length >= total || isLoading}
-								onClick={() => setOffset(offset + limit)}
+								onClick={() => { setSelectedMessages([]); setOffset(offset + limit); }}
 								aria-label={t("list.nextPage")}
 							>
 								<ChevronRight className="h-4 w-4" />
@@ -551,7 +531,7 @@ export function MessageFolderPage({
 									size="sm"
 									aria-label={t("list.showUnreadOnly")}
 									aria-pressed={unreadOnly}
-									onClick={() => setUnreadOnly((current) => !current)}
+									onClick={() => { setSelectedMessages([]); setUnreadOnly((current) => !current); }}
 									className={unreadOnly ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : undefined}
 								>
 									<ListFilter className="h-4 w-4" />

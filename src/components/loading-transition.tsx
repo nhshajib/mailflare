@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIsFetching } from "@tanstack/react-query";
 import { useBranding } from "@/components/branding-provider";
@@ -16,13 +17,13 @@ let hasShownInitialLoadingTransition = false;
 export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 	const { t } = useLanguage();
 	const branding = useBranding();
-	const showInitialLoader = useRef(!hasShownInitialLoadingTransition).current;
-	const startedAt = useRef(Date.now());
+	const [showInitialLoader] = useState(() => !hasShownInitialLoadingTransition);
+	const [startedAt] = useState(() => Date.now());
 	const [progress, setProgress] = useState(8);
 	const [loaderVisible, setLoaderVisible] = useState(showInitialLoader);
 	const [contentVisible, setContentVisible] = useState(!showInitialLoader);
 	const [initialLoadComplete, setInitialLoadComplete] = useState(!showInitialLoader);
-	const [iconUrl, setIconUrl] = useState(branding.iconUrl);
+	const [iconUrl, setIconUrl] = useResettableState(branding.iconUrl, branding.iconUrl);
 	const [pageMounted, setPageMounted] = useState(false);
 	const [pendingLoads, setPendingLoads] = useState(0);
 	const [dataWaitExpired, setDataWaitExpired] = useState(false);
@@ -37,9 +38,6 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 	const loadingContext = useMemo(() => ({ reportLoading }), [reportLoading]);
 	const canComplete = ready && pageMounted && (dataWaitExpired || (pendingLoads === 0 && fetchingQueries === 0));
 
-	useEffect(() => {
-		setIconUrl(branding.iconUrl);
-	}, [branding.iconUrl]);
 
 	useEffect(() => {
 		if (canComplete) return;
@@ -64,7 +62,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 	useEffect(() => {
 		if (!canComplete) return;
 		const remaining = showInitialLoader
-			? Math.max(0, MINIMUM_LOADING_TIME - (Date.now() - startedAt.current))
+			? Math.max(0, MINIMUM_LOADING_TIME - (Date.now() - startedAt))
 			: 0;
 		const completeTimer = window.setTimeout(() => setProgress(100), remaining);
 		const revealTimer = window.setTimeout(() => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useResettableState } from "@/hooks/use-resettable-state";
 import { createElement, useEffect, useRef, useState } from "react";
 import { Ban, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, Star } from "lucide-react";
 import { useCompose } from "@/components/compose/compose-context";
@@ -32,8 +33,8 @@ export function ThreadMessageActions({
 }: ThreadMessageActionsProps) {
 	const { t } = useLanguage();
 	const { openDraftComposer } = useCompose();
-	const [starred, setStarred] = useState(message.starred);
-	const [moreOpen, setMoreOpen] = useState(false);
+	const [starred, setStarred] = useResettableState(message.starred, message.starred);
+	const [moreOpen, setMoreOpen] = useResettableState(starOnly, false);
 	const moreRef = useRef<HTMLDivElement>(null);
 	useDismissible(moreOpen, () => setMoreOpen(false), moreRef);
 	const [sourceOpen, setSourceOpen] = useState(false);
@@ -44,11 +45,6 @@ export function ThreadMessageActions({
 	const replyFromAddress = ownAddresses.length > 0
 		? getOwnAddressForMessage(message, ownAddresses)
 		: ownAddress;
-
-	useEffect(() => setStarred(message.starred), [message.starred]);
-	useEffect(() => {
-		if (starOnly) setMoreOpen(false);
-	}, [starOnly]);
 
 	async function onToggleStar() {
 		setPending(true);

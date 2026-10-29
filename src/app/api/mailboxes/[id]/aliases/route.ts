@@ -1,3 +1,4 @@
+import { isUniqueConstraintError } from "@/lib/database-errors";
 import { and, eq, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
@@ -116,7 +117,9 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 	}
 
 	const aliasId = newId("als");
-	const inserted = await db
+	let inserted: { id: string }[];
+	try {
+		inserted = await db
 		.insert(mailboxAliases)
 		.values({
 			id: aliasId,
@@ -126,6 +129,10 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 		})
 		.onConflictDoNothing()
 		.returning({ id: mailboxAliases.id });
+	} catch (error) {
+		if (isUniqueConstraintError(error)) return NextResponse.json({ error: "Address already assigned" }, { status: 409 });
+		throw error;
+	}
 	if (inserted.length === 0) {
 		return NextResponse.json({ error: "An alias already uses this address" }, { status: 409 });
 	}
