@@ -89,7 +89,7 @@
     "lucide-react": "^1.16.0",
     "mimetext": "^3.0.28",
     "mysql2": "^3.24.6",
-    "nanoid": "^5.1.16",
+    "nanoid": "^6.0.2",
     "next": "^16.4.3",
     "nodemailer": "^10.0.9",
     "parse-srcset": "^1.0.2",
