@@ -1156,7 +1156,7 @@
 	"mailboxes.personalInbox": "Personal inbox",
 	"mailboxes.sharedInbox": "Shared inbox",
 	"mailboxes.account": "Account",
-	"mailboxes.sharedHint": "After creating the shared inbox, choose which Team accounts can access it.",
+	"mailboxes.sharedHint": "After creating the shared inbox, choose which accounts can access it.",
 	"mailboxes.namePlaceholder": "Mailbox name",
 	"mailboxes.emailAddress": "Email address",
 	"mailboxes.localPlaceholder": "support",

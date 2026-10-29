@@ -18,7 +18,7 @@ The repository now passes its local release gates. **Production readiness still 
 - [x] Real local Worker/D1 HTTP smoke: administrator/user login, two personal mailboxes, own-message access, denied cross-user reads/admin APIs and disabled-login rejection. Synthetic fixtures are cleaned up.
 - [x] Chromium desktop/mobile smoke: login, visible/actionable account controls, labels, keyboard focus, no horizontal overflow/client exceptions and mailbox-creation form defaults. This is targeted acceptance, not a full manual accessibility audit.
 - [x] CI gates include fresh installation, lint, types, full tests, audit, production/staging builds, artifact isolation, Chromium/local Worker and PostgreSQL checks. Staging deployment stays manual and depends on every gate.
-- [x] Upstream entitlement checks and license notices preserved; source-availability and rollout/rollback requirements documented.
+- [x] Commercial activation, paid-plan checks and seat limits removed from the AGPL fork; real authorization, license/copyright notices and source-availability requirements preserved.
 - [x] Reusable environment install/start instructions updated and saved as a draft. This does not apply or publish environment changes.
 
 ## Remote release gates — still unverified
@@ -41,7 +41,7 @@ See [feature behavior and delivery policy](typewit-independent-enhancements.md),
 | Fresh `npm ci` | Passed; 866 locked packages installed |
 | `npm run lint` | Passed with warnings; no rules disabled |
 | `npx tsc --noEmit` | Passed |
-| `node --test tests/*.test.mjs` | 401 tests: 399 passed, 2 intentional skips, 0 failures |
+| `node --test tests/*.test.mjs` | 404 tests: 402 passed, 2 intentional skips, 0 failures |
 | `npm audit --audit-level=high` | Zero vulnerabilities, including development dependencies |
 | Production Worker build | Passed; no deployment |
 | Staging Worker build and artifact validator | Passed; no deployment |
@@ -51,3 +51,9 @@ See [feature behavior and delivery policy](typewit-independent-enhancements.md),
 | Collision preflight/failure recovery | Count-only detection, failed-migration rollback and preserved legacy rows passed |
 
 The two skips are the pre-existing SQLite schema-history checks, not newly disabled tests. Executable coverage validates current SQLite migrations, backup/restore, derived claims and pre-TypeWit backup compatibility. These results describe the local environment; remote Actions/staging/delivery/rollback results are not inferred.
+
+## Removal of commercial activation
+
+The current feature change removes purchase/upgrade UI, the `/licenses` page, `/api/licenses` endpoints and the Paymug client. Features no longer consult activation records, paid plans or seat counts. Existing authorization remains enforced. No active premium status or license key is fabricated. Historical tables/migrations remain for backup compatibility, without runtime licensing reads. New executable regressions cover account creation with expired/zero-seat or absent legacy records, administrator/API-scope denial, primary-admin-only branding and explicit shared-mailbox grants/revocation. Existing configured forwarding honors account status and still relies on provider delivery protections. Production has not been deployed.
+
+Licensing-removal verification: full suite 404 tests (402 passed, 2 pre-existing skips); lint, TypeScript, full dependency audit, production/staging builds and staging artifact validation passed. The browser smoke now checks that branding is accessible without activation, upgrade/licensing navigation is absent, pages do not request activation status, and `/api/licenses` returns 404. No remote deployment or vendor licensing request was performed.

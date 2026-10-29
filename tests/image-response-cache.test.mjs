@@ -11,7 +11,6 @@ const mocks = {
 	"@/db": "export function getDb() { return globalThis.imageResponseTest.db; }",
 	"@/lib/cloudflare": "export async function getEnvAsync() { return globalThis.imageResponseTest.env; }",
 	"@/lib/branding/service": "export const APP_SETTINGS_ID = 'app';",
-	"@/lib/licenses/service": "export async function getLicenseEntitlements() { return { canCustomizeBranding: globalThis.imageResponseTest.custom }; }",
 };
 await build({
 	stdin: {
@@ -77,7 +76,7 @@ function brandingState({ custom = false, iconKey = null, assetStatus = 200, obje
 }
 const iconRequest = () => new Request("https://mail.test/api/branding/icon");
 
-test("default branding icon overrides revalidation-only asset headers for unlicensed and licensed installs", async () => {
+test("default branding icon overrides revalidation-only asset headers with or without customization", async () => {
 	for (const custom of [false, true]) {
 		brandingState({ custom });
 		const response = await getBrandingIcon(iconRequest());

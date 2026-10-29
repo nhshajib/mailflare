@@ -65,6 +65,8 @@ try {
         page.setDefaultTimeout(30_000);
         page.setDefaultNavigationTimeout(60_000);
         const errors = [];
+        const licensingRequests = [];
+        page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/licenses")) licensingRequests.push(request.url()); });
         page.on("pageerror", error => errors.push(error.message));
         await page.goto("/login");
         await page.waitForFunction(() => { const form = document.querySelector("form"); return form && Object.keys(form).some(key => key.startsWith("__reactProps")); });
@@ -108,6 +110,13 @@ try {
         await page.getByRole("combobox", { name: "Domain", exact: true }).selectOption(domainId);
         assert.equal(await page.getByRole("button", { name: "Create mailbox", exact: true }).isEnabled(), true, "Displayed defaults and submitted owner must agree");
         assert.deepEqual(errors, [], "Mailbox settings must not throw client exceptions");
+        await page.goto("/branding");
+        await page.locator("#appName").waitFor();
+        assert.equal(await page.getByRole("link", { name: "Upgrade", exact: true }).count(), 0);
+        assert.equal(await page.getByRole("link", { name: "Licenses", exact: true }).count(), 0);
+        assert.deepEqual(licensingRequests, [], "Normal application pages must not query activation status");
+        assert.equal((await context.request.get("/api/licenses")).status(), 404, "The retired licensing API must not issue a synthetic premium status");
+        assert.deepEqual(errors, [], "Branding settings must be available without client exceptions");
         await context.close();
       }
       console.log("PASS: real Chromium desktop/mobile login and account directory, keyboard focus, labels, no horizontal overflow or client exceptions.");

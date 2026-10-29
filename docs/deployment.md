@@ -179,6 +179,8 @@ New application releases must remain compatible with the previous schema until a
 
 When adding a schema change, create a new uniquely named SQL file in `drizzle/migrations` and do not edit an applied migration. Build and development commands generate the Worker migration bundle from those files. `npm run db:bundle` can generate it explicitly.
 
-## Branding license
+## Features and authorization
 
-Activate a purchased Pro or Team key from **Admin → Licenses**. Mailflare sends the key to Paymug and stores only a one-way hash and the activation state. Apply all D1 migrations before activating a license.
+This TypeWit fork does not require a software activation key or a paid plan for its bundled account management, shared inboxes, branding or forwarding features. There are no activation/validation/deactivation endpoints, upgrade screens or calls to a licensing service. Roles, administrator capabilities, API-key scopes and explicit mailbox permissions still apply; feature availability does not grant administrator access.
+
+The AGPLv3 license and upstream copyright notices remain in force. Publish corresponding source for the version served to network users as described in `LICENSE`. The old `license_settings` table and historical migrations remain solely for database/backup compatibility and are not read to authorize features. Removing the app's activation system does not change external provider permissions or account configuration. Existing saved branding and forwarding settings are honored when this version is deployed; review those settings during the controlled rollout.

@@ -23,27 +23,6 @@ export default function BrandingPage() {
 	const inputRef = useRef<HTMLInputElement>(null);
 
 
-	if (!branding.canCustomizeBranding) {
-		return (
-			<div className="space-y-6">
-				<div>
-					<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("branding.title")}</h1>
-					<p className="mt-2 text-sm text-neutral-500">{t("branding.proOnly")}</p>
-				</div>
-				<Card className="rounded-3xl border-0 bg-white p-6">
-					<CardHeader className="py-0">
-						<CardTitle className="flex items-center gap-2"><LockKeyhole className="h-5 w-5" />{t("branding.licenseRequired")}</CardTitle>
-						<CardDescription>{t("branding.originalNote")}</CardDescription>
-					</CardHeader>
-					<CardContent className="flex flex-col gap-3 pt-6 sm:flex-row">
-						<Button asChild>
-							<Link href="/licenses">{t("license.view")}</Link>
-						</Button>
-					</CardContent>
-				</Card>
-			</div>
-		);
-	}
 
 	function pickIcon(file: File | null) {
 		setIcon(file);

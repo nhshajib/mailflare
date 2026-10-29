@@ -1,8 +1,8 @@
 /**
  * TypeWit-specific application identity.
  *
- * This configuration is independent of Mailflare's licensed branding service.
- * It does not modify license entitlements, account privileges, or mail delivery.
+ * This configuration provides TypeWit presentation defaults.
+ * It does not change account privileges or mail delivery.
  * Presentation components may adopt these values incrementally.
  */
 export const TYPEWIT_IDENTITY = {

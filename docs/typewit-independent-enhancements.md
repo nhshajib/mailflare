@@ -14,9 +14,13 @@ This branch remains a **draft release candidate, not production-ready**. See [re
 - Configurable email Worker routing target (default remains `mailflare`); staging explicitly targets its own Worker and blocks TypeWit account creation that would mutate Cloudflare routing.
 - Source and compiled staging binding checks reject additional databases, buckets, queue consumers/producers, service overrides, production identifiers and provider variables.
 
-## Licensing
+## Licensing and feature availability
 
-`LICENSE` and upstream copyright notices remain intact. No license validation, entitlements, payment verification, licensed account endpoints or licensed forwarding settings were altered. TypeWit modules were independently written against publicly licensed database/authentication and provider APIs. Network users must be offered corresponding source for the version served under AGPLv3 §13, including modifications and build/install instructions. The auth screen links to this repository; the release operator must ensure every network user can access the corresponding source (including if repository visibility changes) and publish the exact deployed commit and its build/configuration instructions, preserving notices and excluding credentials/customer data. TypeWit ownership of its additions does not remove the combined program's applicable AGPL obligations or grant rights to proprietary Pro/Team code.
+`LICENSE` and upstream copyright notices remain intact. The checked-in code is covered by AGPLv3; no separately licensed implementation was imported for this change. This fork removes the local commercial activation system, paid feature checks, seat enforcement, upgrade indicators and purchase/activation APIs. It does not forge a Pro/Team status or call a vendor activation service. The retained `license_settings` table is historical backup data only, and no schema/data deletion is required.
+
+All bundled capabilities are available subject to their existing roles, API-key scopes, ownership and explicit sharing grants. Account management and shared inboxes still require an authorized administrator; changing branding still requires the primary administrator; forwarding settings belong to the authenticated owner. Disabled/deleted owners do not forward. Provider configuration, destination verification and loop guards are preserved.
+
+Network users must be offered corresponding source for the version served under AGPLv3 §13, including modifications and build/install instructions. The auth screen links to this repository; ensure every network user can access that source and publish the exact release commit. Removing an application's activation mechanism does not remove its copyright license or third-party service requirements.
 
 ## Known limits that block release
 
