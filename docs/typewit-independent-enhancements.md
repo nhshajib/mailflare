@@ -29,3 +29,10 @@ Remote staging resources/permissions and GitHub environment approval settings ha
 ## Browser and state lifecycle validation
 
 The shared `useResettableState` hook associates local edits with a stable entity/server-value key and resets before a different entity is committed. `useHydrated` keeps server and initial client markup consistent before reading browser preferences; theme state uses an external-store subscription. Tests exercise committed draft resets, functional setters, StrictMode and hydration without recoverable errors. Existing application tests remain enabled. Browser smoke checks wait for hydration, visible ancestors and a trial click so a loading overlay cannot count as a usable UI.
+# Private sign-in homepage
+
+The root URL renders the TypeWit sign-in form directly, without redirecting to `/login`. The dedicated `/login` route remains available for existing links and adding another account. Password recovery, MFA, and Turnstile remain part of the existing authentication flow.
+
+Public registration is disabled unconditionally: `POST /api/auth/register` returns 403, `/register` returns to the homepage, and `/setup` cannot expose first-account registration. Administrators provision new accounts through the existing authenticated account controls. This private installation expects an already-provisioned administrator.
+
+The homepage inherits `noindex` robots metadata and the application's `X-Robots-Tag` header. `robots.txt` permits crawling only the root URL so search engines can read those exclusion directives; other application paths remain disallowed. Existing search results may require recrawling or a removal request in Google Search Console.

@@ -68,12 +68,21 @@ try {
         const licensingRequests = [];
         page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/licenses")) licensingRequests.push(request.url()); });
         page.on("pageerror", error => errors.push(error.message));
-        await page.goto("/login");
+        const landing = await page.goto("/");
+        assert.equal(landing.status(), 200, "Homepage must render without a redirect");
+        assert.equal(new URL(page.url()).pathname, "/");
+        assert.match(landing.headers()["x-robots-tag"] ?? "", /noindex/);
+        assert.match(await page.locator('meta[name="robots"]').getAttribute("content"), /noindex/);
+        assert.equal(await page.locator('a[href="/register"], a[href="/signup"]').count(), 0);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+        if (process.env.TYPEWIT_SCREENSHOT_DIR) {
+          await page.screenshot({ path: `${process.env.TYPEWIT_SCREENSHOT_DIR}/typewit-signin-${viewport.width}.png`, fullPage: true });
+        }
         await page.waitForFunction(() => { const form = document.querySelector("form"); return form && Object.keys(form).some(key => key.startsWith("__reactProps")); });
         await page.locator('input[type="email"]').fill(`admin@${host}`);
         await page.locator('input[type="password"]').fill(password);
         await page.getByRole("button", { name: "Sign in", exact: true }).click();
-        await page.waitForURL(url => !url.pathname.startsWith("/login"), { timeout: 30_000 });
+        await page.waitForURL(url => url.pathname !== "/" && !url.pathname.startsWith("/login"), { timeout: 30_000 });
         await page.goto("/typewit-accounts");
         await page.getByRole("heading", { name: "TypeWit accounts", exact: true }).waitFor();
         await page.getByText(`alice@${host}`, { exact: true }).waitFor();

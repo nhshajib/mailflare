@@ -1,4 +1,6 @@
 User-agent: *
+# Let crawlers read the homepage's noindex directive; block the rest of the app.
+Allow: /$
 Disallow: /
 
 User-agent: GPTBot

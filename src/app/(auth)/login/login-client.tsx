@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { SignInShell as AuthShell } from "@/components/auth/sign-in-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,7 +107,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               {error}
             </p>
           )}
-          <Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+          <Button type="submit" className="h-12 w-full rounded-xl bg-[#142c31] px-6 text-white hover:bg-[#24444a] active:scale-[0.98]" disabled={loading}>
             {loading ? t("auth.verifying") : t("auth.verify")}
           </Button>
           <button
@@ -174,7 +174,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         <TurnstileField resetSignal={turnstileReset} />
         <Button
           type="submit"
-          className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+          className="h-12 w-full rounded-xl bg-[#142c31] px-6 text-white hover:bg-[#24444a] active:scale-[0.98]"
           disabled={loading}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}

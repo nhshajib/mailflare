@@ -1,6 +1,9 @@
+import { LoginClient } from "./(auth)/login/login-client";
+import { authPageMetadata } from "./(auth)/auth-metadata";
 
-import { redirect } from "next/navigation";
+export const dynamic = "force-dynamic";
+export const generateMetadata = () => authPageMetadata("auth.signIn");
 
 export default function HomePage() {
-  redirect("/login");
+  return <LoginClient />;
 }
