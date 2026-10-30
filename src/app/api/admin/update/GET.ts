@@ -6,7 +6,7 @@ export async function GET(request: Request) {
 	if ("error" in authorization) return authorization.error;
 
 	try {
-		return NextResponse.json(await getUpdateStatus(authorization.env));
+		return NextResponse.json(await getUpdateStatus(), { headers: { "Cache-Control": "private, no-store" } });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Could not check for updates";
 		const status = message.includes("must be configured") ? 503 : 502;

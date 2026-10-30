@@ -8,7 +8,9 @@ export async function loadTypewitRuntime() {
   mkdirSync(resolve("node_modules/.cache"), { recursive: true });
   const outdir = mkdtempSync(resolve("node_modules/.cache/typewit-"));
   await build({
-    stdin: { contents: `export * as branding from './src/app/api/branding/route.ts';
+    stdin: { contents: `export * as updates from './src/app/api/admin/update/route.ts';
+      export * from './src/lib/updates/releases.ts';
+      export * as branding from './src/app/api/branding/route.ts';
       export * as accountForwarding from './src/app/api/settings/forwarding/route.ts';
       export * from './src/lib/email/account-forwarding.ts';
       export * as login from './src/app/api/auth/login/route.ts';
