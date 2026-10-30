@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Mail, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { SignInShell as AuthShell } from "@/components/auth/sign-in-shell";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TurnstileField } from "@/components/auth/turnstile";
 import { submitLogin, submitMfaCode } from "./utils";
+import styles from "@/components/auth/sign-in-shell.module.css";
 
 export function LoginClient({ adding = false }: { adding?: boolean }) {
   const { t } = useLanguage();
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [turnstileReset, setTurnstileReset] = useState(0);
@@ -156,15 +158,20 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               {t("auth.forgotPassword")}
             </Link>
           </div>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "login-error" : undefined}
-            required
-          />
+          <div className={styles.passwordField}>
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
+              required
+            />
+            <button type="button" className={styles.passwordToggle} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>
+              {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            </button>
+          </div>
         </div>
         {error && (
           <p id="login-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">

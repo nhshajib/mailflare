@@ -1,0 +1,128 @@
+/* This public entry point keeps its light brand palette even when an inbox
+   preference sets .dark on <html>. Do not mutate the saved application theme. */
+.shell {
+  color-scheme: light;
+  --color-white: #fff;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #737373;
+  --color-neutral-500: #666;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+  --color-blue-600: #1355ce;
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-700: #b91c1c;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: radial-gradient(ellipse at 50% 32%, #edf3ff 0, #f7f9fc 55%, #f7f9fc 100%);
+  background-color: #f7f9fc;
+  color: #17243d;
+  -webkit-text-size-adjust: 100%;
+}
+.shell a, .shell button, .shell select { -webkit-tap-highlight-color: transparent; }
+.shell a:focus-visible, .shell button:focus-visible, .shell select:focus-visible {
+  outline: 3px solid #1555cf;
+  outline-offset: 4px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  padding: 24px 40px;
+  border-bottom: 1px solid #e4e9f2;
+  background: #ffffffb3;
+}
+.brand { display: inline-flex; align-items: center; gap: 20px; border-radius: 4px; }
+.brand img { width: 132px; height: auto; }
+.brandDivider { height: 22px; width: 1px; background: #dce2ec; }
+.product { font-size: 13px; font-weight: 500; color: #4e5b71; }
+.headerActions { display: flex; align-items: center; gap: 28px; }
+.website { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #4e5b71; }
+.website:hover { color: #1355ce; }
+.stage { flex: 1; display: grid; place-items: center; padding: 36px 20px; }
+.card {
+  width: 100%;
+  max-width: 432px;
+  padding: 32px;
+  border: 1px solid #dee5ef;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 60px -35px #273f7045, 0 2px 6px #1f3c6805;
+}
+.eyebrow { display: flex; align-items: center; gap: 9px; margin-bottom: 24px; color: #506078; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+.lock { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: #eef4ff; color: #1555cf; }
+.title { font-size: 28px; font-weight: 600; line-height: 1.2; letter-spacing: -0.035em; color: #14213b; }
+.description { margin-top: 8px; font-size: 14px; line-height: 1.6; color: #5b687d; }
+.form { margin-top: 28px; }
+.form label { font-size: 12px; font-weight: 500; color: #2f405b; }
+.form input {
+  height: 48px;
+  border: 1px solid #cbd5e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #17243d;
+  caret-color: #1355ce;
+  font-size: 16px;
+  box-shadow: 0 1px 2px #17243d03;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.form input::placeholder { color: #657187; }
+.form input:focus-visible { outline: none; border-color: #1555cf; box-shadow: 0 0 0 3px #1555cf20; }
+.form input[aria-invalid="true"] { border-color: #b91c1c; }
+.form input:is(:autofill, :-webkit-autofill) {
+  -webkit-text-fill-color: #17243d;
+  caret-color: #17243d;
+  box-shadow: 0 0 0 1000px #f1f6ff inset;
+}
+.form input:is(:autofill, :-webkit-autofill):focus-visible { box-shadow: 0 0 0 1000px #f1f6ff inset, 0 0 0 3px #1555cf20; }
+.form a { color: #1555cf; }
+.form button[type="submit"] {
+  height: 48px;
+  border: 1px solid #1555cf;
+  border-radius: 9px;
+  background: #1555cf;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 3px #0b3b9a15;
+  transition: background 150ms, box-shadow 150ms;
+}
+.form button[type="submit"]:hover { background: #1048b6; box-shadow: 0 3px 8px #0b3b9a25; }
+.form button[type="submit"]:disabled { opacity: 0.65; }
+.form [role="alert"] { border-color: #fecaca; background: #fef2f2; color: #a61c1c; }
+.passwordField { position: relative; }
+.passwordField input { padding-inline-end: 48px; }
+.passwordToggle { position: absolute; inset-inline-end: 2px; top: 2px; display: grid; place-items: center; height: 44px; width: 44px; border-radius: 6px; color: #52627a; }
+.passwordToggle:hover { background: #f0f4fa; color: #14213b; }
+.accessNote { display: flex; align-items: center; gap: 7px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #edf0f5; font-size: 11px; line-height: 1.6; color: #5b687d; }
+.accessNote svg { flex-shrink: 0; }
+.returnLink { margin-top: 20px; font-size: 13px; }
+.returnLink a { color: #1555cf; }
+.footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; padding: 16px 20px 22px; color: #5b687d; font-size: 11px; }
+.footer a { color: #5b687d; text-underline-offset: 3px; }
+.footer a:hover { text-decoration: underline; }
+@media (max-width: 600px) {
+  .header { padding: 18px 20px; gap: 12px; }
+  .brand { gap: 12px; }
+  .brand img { width: 110px; }
+  .brandDivider, .product, .website { display: none; }
+  .headerActions { gap: 12px; }
+  .stage { padding: 24px 16px; }
+  .card { padding: 28px 24px; border-radius: 16px; }
+  .title { font-size: 26px; }
+  .accessNote { align-items: flex-start; }
+  .accessNote svg { margin-top: 2px; }
+  .footer { padding-bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form input, .form button[type="submit"] { transition: none; }
+}

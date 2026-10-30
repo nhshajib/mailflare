@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { KeyRound } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { SignInShell as AuthShell } from "@/components/auth/sign-in-shell";
 import { TurnstileField } from "@/components/auth/turnstile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

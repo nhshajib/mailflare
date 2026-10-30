@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { SignInShell as AuthShell } from "@/components/auth/sign-in-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -68,6 +68,7 @@ jobs:
           done
           if [ "$ready" != true ]; then cat /tmp/typewit-worker.log; exit 1; fi
           node scripts/typewit-local-smoke.mjs --browser
+          node scripts/typewit-signin-visual-smoke.mjs
       - name: PostgreSQL migrations, claims, query shapes and backup restoration
         if: matrix.check == 'postgres'
         env:
