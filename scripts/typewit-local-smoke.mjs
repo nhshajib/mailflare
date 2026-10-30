@@ -36,6 +36,9 @@ try {
     const response = await api("/api/typewit/accounts", { method: "POST", token: admin, body: { domainId, username, password } });
     assert.equal(response.status, 201, "Personal account provisioning must succeed locally without routing changes");
     const created = await response.json();
+    const rejected = await api("/api/auth/login", { method: "POST", body: { email: `${username}@${host}`, password } });
+    assert.equal(rejected.status, 403, "Non-administrator sign-in must be rejected");
+    localSql(`UPDATE users SET role='admin' WHERE id='${created.account.id}';`);
     accounts.push({ ...created, token: await login(`${username}@${host}`) });
   }
   for (const [index, own] of accounts.entries()) {
@@ -55,6 +58,7 @@ try {
     assert.equal((await api("/api/typewit/accounts", { token: own.token })).status, 403);
     assert.equal((await api("/api/typewit/forwarding", { token: own.token })).status, 403);
   }
+  localSql(`UPDATE users SET role='user' WHERE id='${accounts[1].account.id}';`);
   if (process.argv.includes("--browser")) {
     const { chromium } = await import("playwright");
     const browser = await chromium.launch({ executablePath: process.env.TYPEWIT_BROWSER_EXECUTABLE || (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : "/usr/bin/google-chrome"), headless: true, args: ["--no-sandbox"] });
@@ -131,11 +135,13 @@ try {
       console.log("PASS: real Chromium desktop/mobile login and account directory, keyboard focus, labels, no horizontal overflow or client exceptions.");
     } finally { await browser.close(); }
   }
+  localSql(`UPDATE users SET role='user' WHERE id='${accounts[0].account.id}';`);
+  assert.equal((await api("/api/auth/me", { token: accounts[0].token })).status, 401, "Demoted administrators lose session access");
   const disabled = await api("/api/typewit/accounts", { method: "PATCH", token: admin, body: { id: accounts[0].account.id, disabled: true } });
   assert.equal(disabled.status, 200);
   const denied = await api("/api/auth/login", { method: "POST", body: { email: `alice@${host}`, password } });
   assert.equal(denied.status, 403);
-  console.log("PASS: real local Worker admin/user login, two-account mailbox isolation, admin API denial and disabled-login rejection. No external mail or remote database operations.");
+  console.log("PASS: real local Worker admin-only login, two-admin mailbox isolation, admin API denial and disabled-login rejection. No external mail or remote database operations.");
 } finally {
   localSql(`DELETE FROM users WHERE created_by_user_id='${adminId}'; DELETE FROM users WHERE id='${adminId}';`);
   rmSync(directory, { recursive: true, force: true });

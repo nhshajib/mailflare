@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 	if ("password" in parsed.data) {
 		const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
 		if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) return json({ error: "Invalid credentials" }, 401);
-		if (user.disabled || user.deletedAt) return json({ error: "Account disabled" }, 403);
+		if (user.disabled || user.deletedAt || user.role !== "admin") return json({ error: "Account disabled" }, 403);
 		if (user.totpEnabled && user.totpSecret) {
 			return json({ ok: true, mfaRequired: true, challengeToken: await createLoginChallenge(env, user.id) });
 		}
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 		const challengeUserId = await getLoginChallengeUserId(env, parsed.data.challengeToken);
 		if (!challengeUserId) return json({ error: "This sign-in attempt has expired. Start again." }, 401);
 		const [user] = await db.select().from(users).where(eq(users.id, challengeUserId)).limit(1);
-		if (!user || user.disabled || user.deletedAt) return json({ error: "Account disabled" }, 403);
+		if (!user || user.disabled || user.deletedAt || user.role !== "admin") return json({ error: "Account disabled" }, 403);
 		if (!(await verifySecondFactor(env, user, parsed.data.code))) return json({ error: "That code did not match" }, 401);
 		await consumeLoginChallenge(env, parsed.data.challengeToken);
 		userId = user.id;

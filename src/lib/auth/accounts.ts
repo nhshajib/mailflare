@@ -66,7 +66,7 @@ export async function resolveAccounts(env: CloudflareEnv, tokens: string[]): Pro
 	const accounts: AccountSummary[] = [];
 	for (let i = 0; i < tokens.length; i++) {
 		const user = byHash.get(hashes[i]);
-		if (!user || user.disabled || user.deletedAt) continue;
+		if (!user || user.disabled || user.deletedAt || user.role !== "admin") continue;
 		accounts.push({
 			userId: user.id,
 			email: user.email,

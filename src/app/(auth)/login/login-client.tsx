@@ -107,7 +107,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               {error}
             </p>
           )}
-          <Button type="submit" className="h-12 w-full rounded-xl bg-[#142c31] px-6 text-white hover:bg-[#24444a] active:scale-[0.98]" disabled={loading}>
+          <Button type="submit" className="h-12 w-full rounded-xl bg-[#0e55d3] px-6 text-white hover:bg-[#0845b0] active:scale-[0.98]" disabled={loading}>
             {loading ? t("auth.verifying") : t("auth.verify")}
           </Button>
           <button
@@ -133,7 +133,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
       description={
         adding
           ? t("auth.addDescription")
-          : "Sign in to your TypeWit mailbox."
+          : "Sign in to manage TypeWit mail services."
       }
     >
       <form method="post" onSubmit={onSubmit} className="space-y-5">
@@ -174,7 +174,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         <TurnstileField resetSignal={turnstileReset} />
         <Button
           type="submit"
-          className="h-12 w-full rounded-xl bg-[#142c31] px-6 text-white hover:bg-[#24444a] active:scale-[0.98]"
+          className="h-12 w-full rounded-xl bg-[#0e55d3] px-6 text-white hover:bg-[#0845b0] active:scale-[0.98]"
           disabled={loading}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}

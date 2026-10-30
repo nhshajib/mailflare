@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 	}
 	const db = getDb(env);
 	const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-	if (!user || user.disabled) {
+	if (!user || user.disabled || user.deletedAt || user.role !== "admin") {
 		return NextResponse.json({ error: "Account disabled" }, { status: 403 });
 	}
 	const method = await verifySecondFactor(env, user, parsed.data.code);

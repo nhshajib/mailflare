@@ -50,7 +50,7 @@ test("release endpoints retain administrator authorization", async () => {
   globalThis.fetch = async () => { throw new Error("Must not fetch"); };
   for (const method of ["GET", "POST"]) {
     assert.equal((await runtime.updates[method](request("invalid", method))).status, 401);
-    assert.equal((await runtime.updates[method](request(user, method))).status, 403);
+    assert.equal((await runtime.updates[method](request(user, method))).status, 401);
   }
 });
 

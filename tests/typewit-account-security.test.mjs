@@ -84,9 +84,11 @@ test("disabled, deleted and expired sessions are rejected and disabling revokes 
   const response = await runtime.accounts.POST(request("POST", input()));
   const { account } = await response.json();
   const token = await runtime.createSession(globalThis.__typewitTestEnv, account.id);
-  assert.ok(await runtime.getUserFromSession(globalThis.__typewitTestEnv, token));
+  assert.equal(await runtime.getUserFromSession(globalThis.__typewitTestEnv, token), null);
+  assert.equal(fixture.sqlite.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id=?").get(account.id).n, 1);
   assert.equal((await runtime.accounts.PATCH(request("PATCH", { id: account.id, disabled: true }))).status, 200);
   assert.equal(await runtime.getUserFromSession(globalThis.__typewitTestEnv, token), null);
+  assert.equal(fixture.sqlite.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id=?").get(account.id).n, 0);
   assert.equal((await runtime.accounts.PATCH(request("PATCH", { id: account.id, disabled: false }))).status, 200);
   assert.equal(await runtime.getUserFromSession(globalThis.__typewitTestEnv, token), null);
   fixture.sqlite.exec("UPDATE sessions SET expires_at=0");
@@ -107,7 +109,7 @@ test("routing failure rolls back atomic database records without leaking provide
   assert.equal(fixture.sqlite.prepare("SELECT count(*) AS n FROM mailboxes").get().n, 0);
 });
 
-test("real login handler creates fresh sessions for admin and normal users and rejects disabled credentials", async () => {
+test("real login handler creates admin sessions and rejects non-admin and disabled credentials", async () => {
   const password = "long test password";
   const hash = runtime.hashPassword(password);
   fixture.sqlite.prepare("UPDATE users SET password_hash=?").run(hash);
@@ -116,7 +118,7 @@ test("real login handler creates fresh sessions for admin and normal users and r
   assert.equal(first.status, 200); assert.equal(second.status, 200);
   assert.notEqual((await first.json()).token, (await second.json()).token);
   assert.match(first.headers.get("set-cookie"), /HttpOnly/i);
-  assert.equal((await login("user@example.test")).status, 200);
+  assert.equal((await login("user@example.test")).status, 403);
   fixture.sqlite.exec("UPDATE users SET disabled=1 WHERE id='user'");
   assert.equal((await login("user@example.test")).status, 403);
   fixture.sqlite.exec("UPDATE users SET disabled=0,deleted_at=1 WHERE id='user'");

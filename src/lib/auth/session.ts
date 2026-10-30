@@ -43,7 +43,7 @@ export async function getUserFromSession(
 	if (!session) return null;
 	const db = getDb(env);
 	const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
-	return user && !user.disabled && !user.deletedAt ? user : null;
+	return user && user.role === "admin" && !user.disabled && !user.deletedAt ? user : null;
 }
 
 export async function getSessionFromToken(

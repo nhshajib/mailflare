@@ -33,6 +33,8 @@ The shared `useResettableState` hook associates local edits with a stable entity
 
 The root URL renders the TypeWit sign-in form directly, without redirecting to `/login`. The dedicated `/login` route remains available for existing links and adding another account. Password recovery, MFA, and Turnstile remain part of the existing authentication flow.
 
+The sign-in screen is an administrator portal using the TypeWit logo and blue brand color, with a link back to typewit.com. Only enabled, non-deleted accounts with role `admin` may sign in. Password, MFA, and mobile-device login enforce this rule, as do existing session resolution and remembered-account switching. Demoting an administrator immediately invalidates their session access; existing non-admin device keys are refused. Mailbox ownership and delivery are unchanged.
+
 Public registration is disabled unconditionally: `POST /api/auth/register` returns 403, `/register` returns to the homepage, and `/setup` cannot expose first-account registration. Administrators provision new accounts through the existing authenticated account controls. This private installation expects an already-provisioned administrator.
 
 The homepage inherits `noindex` robots metadata and the application's `X-Robots-Tag` header. `robots.txt` permits crawling only the root URL so search engines can read those exclusion directives; other application paths remain disallowed. Existing search results may require recrawling or a removal request in Google Search Console.

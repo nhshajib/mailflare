@@ -8,7 +8,11 @@ export async function loadTypewitRuntime() {
   mkdirSync(resolve("node_modules/.cache"), { recursive: true });
   const outdir = mkdtempSync(resolve("node_modules/.cache/typewit-"));
   await build({
-    stdin: { contents: `export * as registration from './src/app/api/auth/register/route.ts';
+    stdin: { contents: `export * as mfaLogin from './src/app/api/auth/mfa/verify/route.ts';
+      export * as deviceLogin from './src/app/api/auth/device/route.ts';
+      export * from './src/lib/auth/login-challenge.ts';
+      export * from './src/lib/auth/accounts.ts';
+      export * as registration from './src/app/api/auth/register/route.ts';
       export * as updates from './src/app/api/admin/update/route.ts';
       export * from './src/lib/updates/releases.ts';
       export * as branding from './src/app/api/branding/route.ts';

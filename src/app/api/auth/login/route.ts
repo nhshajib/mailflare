@@ -47,6 +47,10 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Account disabled" }, { status: 403 });
 	}
 
+	if (user.role !== "admin") {
+		return NextResponse.json({ error: "Administrator access only" }, { status: 403 });
+	}
+
 	// The password is right but a second factor is on: hand back a short-lived
 	// challenge instead of a session and let /api/auth/mfa/verify finish.
 	if (user.totpEnabled && user.totpSecret) {

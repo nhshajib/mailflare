@@ -42,7 +42,8 @@ test("shared mailbox access still requires an explicit grant and respects revoca
   assert.equal(await runtime.getMailboxAccessLevel(db, { id: "u", role: "user" }, "m"), null);
 });
 
-test("users can configure only their own forwarding without activation; disabled owners never forward", async () => {
+test("administrators can configure only their own forwarding without activation; disabled owners never forward", async () => {
+  fixture.sqlite.exec("UPDATE users SET role='admin' WHERE id='u'");
   const request = token => new Request("https://local.test/api/settings/forwarding", { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ forwardingEmail: "verified@external.test" }) });
   assert.equal((await runtime.accountForwarding.PATCH(request(user))).status, 200);
   assert.equal(fixture.sqlite.prepare("SELECT forwarding_email FROM users WHERE id='admin'").get().forwarding_email, null);
