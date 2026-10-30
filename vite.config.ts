@@ -13,6 +13,12 @@ export default defineConfig({
 		alias: [{ find: /^css-tree$/, replacement: "css-tree/dist/csstree.esm" }],
 	},
 	server: { allowedHosts: ["mailflare.local", "mail.dev"] },
+	// vinext emits runtime manifest imports relative to the server output root.
+	// Keep server chunks beside those manifests so workerd can resolve them.
+	environments: {
+		rsc: { build: { rollupOptions: { output: { chunkFileNames: "[name]-[hash].js" } } } },
+		ssr: { build: { rollupOptions: { output: { chunkFileNames: "[name]-[hash].js" } } } },
+	},
 	plugins: lazyPlugins(() => [
 		vinext({ images: { optimizer: imagesOptimizer() } }),
 		cloudflare({
